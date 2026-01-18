@@ -1,0 +1,9 @@
+node_modules
+.env
+db.json
+logs
+.vscode
+target
+*.log
+
+db.json.backup
