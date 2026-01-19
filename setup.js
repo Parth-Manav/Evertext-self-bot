@@ -34,6 +34,7 @@ export async function runSetup() {
         }
 
         const encryptionKey = await askQuestion(rl, '2. Enter an ENCRYPTION_KEY (Optional, press Enter to skip): ');
+        const logChannelId = await askQuestion(rl, '3. Enter LOG_CHANNEL_ID (Required for status updates): ');
 
         // Construct .env content
         let envContent = `DISCORD_TOKEN=${token.trim()}\n`;
@@ -42,6 +43,10 @@ export async function runSetup() {
             envContent += `ENCRYPTION_KEY=${encryptionKey.trim()}\n`;
         } else {
             console.log('ℹ️ No encryption key provided. Security will be minimal.');
+        }
+
+        if (logChannelId.trim()) {
+            envContent += `LOG_CHANNEL_ID=${logChannelId.trim()}\n`;
         }
 
         // Write to .env

@@ -180,8 +180,9 @@ If you have downloaded the pre-built `bot.exe` or built it yourself:
 3.  **First time?** It will ask you for:
     - `DISCORD_TOKEN`
     - `ENCRYPTION_KEY` (Optional)
+    - `LOG_CHANNEL_ID` (For bot/status notifications)
     
-    These will be saved to a `.env` file automatically.
+    These will be saved to a `.env` file automatically
     so you don't have to type them again.
 5.  The bot will launch!
 
