@@ -10,6 +10,7 @@ logs/
 *.log
 
 # Runtime data
+db.json
 db.json.backup
 # preventing db.json from being ignored if it was previously tracked, but usually local db should be ignored. 
 # However, user mentioned db.json.backup specifically earlier. 
