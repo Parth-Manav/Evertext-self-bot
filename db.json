@@ -1,0 +1,27 @@
+{
+  "accounts": [
+    {
+      "id": "1768831285880",
+      "name": "sol",
+      "encryptedCode": "U2FsdGVkX197LLa6QWrYkdGfMMtLxg8EtSi9K9fSGIY=",
+      "targetServer": "E-15",
+      "serverToggle": true,
+      "lastRun": "2026-01-19T14:17:11.220Z",
+      "status": "error"
+    },
+    {
+      "id": "1768831955273",
+      "name": "palk18",
+      "encryptedCode": "U2FsdGVkX1+jltbe1gaY3pvEfoM7/Ch8fdeuLtz+yVU=",
+      "targetServer": "E-18",
+      "serverToggle": true,
+      "lastRun": null,
+      "status": "error"
+    }
+  ],
+  "settings": {
+    "scheduleStart": "10:00",
+    "scheduleEnd": "20:00",
+    "cookies": "U2FsdGVkX19D9tUGGzBCql5PntJMf9NJ8D/l7F1+E72BPFekX7iSypuKgOWPb+kg876Xm4UWwRxqHQc1JH4eXsKapwAv3GbNY5tDW49IP+JTMyQrpo/HKjWFLeYw4GEae5Yotg9nKkAgsDLQfqfzp3S7usOq9lWv/2jK/nAjD1XICHX6Fkpl5vOPEA45azTov5l1h8Ywy5naI+L3tp9sKE8Jc0sx3ugKNubmHL1n//64ZU4lUYgOlL5DgDvtyqHazu2ncBWEaktzzb9aaEdB3R267nvhjrPhf0PnpOwv9sgAkANWpuFexGzYVKyf3wEsA8RZf0RW6xIYXRpyhrZ72jTrwApMFtzF0HPhsA5ZcgIfa/1+OZUvOSEcYp3JFk2/xHCLHLFfJvEBHzNY/WZIjemVZgBPckh0XQfEIziLkT42Wxvd3OLfFO235yQiNA0Vpk4G9Bv7PSJiTRSu2G99GTALo6NzbQydDLXxECAGVNc15JULd+DhBgQ4LFw/BE4YxLO1M99hPwtznLYibuWtwBudxL3bVKh7dcaMV5wJLdXfS07DpRffDzzfwz7/C9HMUK4mB37TGm436ZUy84WS8Chqph2Oe+v8pcw5RmcXseI="
+  }
+}

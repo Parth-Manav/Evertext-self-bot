@@ -19,7 +19,6 @@ enum InputMessage {
 
 #[derive(Debug, Deserialize, Clone)]
 struct AccountInfo {
-    name: String,
     code: String,
     #[serde(rename = "targetServer")]
     target_server: String,

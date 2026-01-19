@@ -130,50 +130,83 @@ Evertext-Discord-Bot-main/
 
 ---
 
-## 🚀 Setup Instructions
+## 📥 Prerequisites & Installation
 
-### Prerequisites
-- **Node.js** (v18+)
-- **Rust** (latest stable)
-- **Discord Bot Token**
-- **Evertale Session Cookie**
+Before you can run the bot, you need to install a few tools. Follow these steps exactly.
 
-### Installation
+### Step 1: Install Node.js
+Node.js is the engine that runs the JavaScript part of the bot.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Parth-Manav/final-evertext-bot.git
-   cd final-evertext-bot
-   ```
+1.  **Download:** Go to [nodejs.org](https://nodejs.org/).
+2.  **Select:** Click the button for the **"LTS" (Long Term Support)** version.
+3.  **Install:** Run the installer.
+    *   ✅ **Important:** During installation, if asked, check the box that says **"Automatically install the necessary tools"** (this helps with other dependencies).
+4.  **Verify:** Open a command prompt (`cmd`) and type `node -v`. You should see a version number (e.g., `v18.x.x`).
 
-2. **Install Node.js dependencies:**
-   ```bash
-   npm install
-   ```
+### Step 2: Install Rust
+Rust is required to build the "Brain" of the bot (the decision engine).
 
-3. **Build Rust brain:**
-   ```bash
-   cd evertext_brain
-   cargo build --release
-   cd ..
-   ```
-   This creates `evertext_brain.exe` in the root directory.
+1.  **Download:** Go to [rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
+2.  **Select:** Download **RUSTUP-INIT.EXE** (64-bit).
+3.  **Install:** Run the executable.
+    *   It may ask to install "Visual Studio Build Tools". Say **YES/Y**.
+    *   When prompted with options 1, 2, 3... type `1` and press Enter to proceed with default installation.
+4.  **Verify:** Open a NEW command prompt and type `cargo --version`. You should see something like `cargo 1.8x.x`.
 
-4. **Create `.env` file:**
-   ```env
-   DISCORD_TOKEN=your_discord_bot_token
-   GUILD_ID=your_guild_id_optional
-   LOG_CHANNEL_ID=your_log_channel_id
-   ENCRYPTION_KEY=your_32_char_encryption_key
-   ```
+### Step 3: Install Git (Optional but Recommended)
+Git allows you to easily download and update the code.
 
-5. **Set session cookie:**
-   Use `/set_cookies` command in Discord (admin only)
+1.  **Download:** Go to [git-scm.com](https://git-scm.com/).
+2.  **Install:** Run the installer. You can just keep clicking "Next" through all the options (defaults are fine).
 
-6. **Start the bot:**
-   ```bash
-   npm start
-   ```
+### Step 4: Install Visual Studio Code (Optional)
+The best editor for viewing and editing the bot's code.
+
+1.  **Download:** Go to [code.visualstudio.com](https://code.visualstudio.com/).
+2.  **Install:** Run the installer.
+
+---
+
+## 🚀 How to Run the Bot
+
+You have two ways to run the bot.
+
+### Option A: The "Easiest" Way (Executable)
+
+If you have downloaded the pre-built `bot.exe` or built it yourself:
+
+1.  **Double-click `bot.exe`**.
+2.  The bot will verify your setup.
+3.  **First time?** It will ask you for:
+    *   `DISCORD_TOKEN`
+    *   `ENCRYPTION_KEY`
+    *   `GUILD_ID`
+4.  It will save these to a `.env` file automatically so you don't have to type them again.
+5.  The bot will launch!
+
+### Option B: The "Developer" Way (Source Code)
+
+If you downloaded the source code and want to run it directly:
+
+1.  **Open Terminal:**
+    Open the folder in VS Code, then open a Terminal (`Ctrl + ~`).
+
+2.  **Install Dependencies:**
+    Run this command to download all libraries:
+    ```bash
+    npm install
+    ```
+
+3.  **Build the Project:**
+    This compiles the Rust brain and sets everything up.
+    ```bash
+    npm run build
+    ```
+
+4.  **Start the Bot:**
+    ```bash
+    npm start
+    ```
 
 ---
 
@@ -301,36 +334,18 @@ When an account encounters a Zigza error:
 
 ---
 
-## 🐛 Debugging
+## 🐛 Troubleshooting & FAQ
 
-### Check Bot Status
-```bash
-npm start
-# Look for: [Discord] Logged in as...
-```
+### 1. "No session cookie configured"
+- **Cause:** You haven't added the Evertale session cookie yet.
+- **Solution:** Use the `/set_cookies` command in Discord with your valid cookie status string.
 
-### Test Single Account
-```
-/force_run name:YourAccount
-```
+### 2. "LOGIN_REQUIRED - Cookie expired"
+- **Cause:** The game session has expired (usually happens every few days).
+- **Solution:** Get a fresh cookie from your browser inspection and update it using `/set_cookies`.
 
-### View Logs
-- Console output shows all brain decisions
-- Discord log channel (if configured) shows account progress
-
-### Common Issues
-
-**1. "Failed to start brain executable"**
-- Solution: Build Rust brain with `cargo build --release`
-
-**2. "No session cookie configured"**
-- Solution: Use `/set_cookies` command
-
-**3. "LOGIN_REQUIRED - Cookie expired"**
-- Solution: Get new session cookie and update with `/set_cookies`
-
-**4. Bot stuck at server selection**
-- Fixed: Hybrid architecture ensures full context available
+### 3. Bot stuck at server selection?
+- **Solution:** This usually means the bot can't see the text properly. The Hybrid architecture fixes this, but if it persists, check your `targetServer` setting for that account.
 
 ---
 

@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,7 +17,23 @@ export class RustBrain {
         return new Promise((resolve, reject) => {
             // Platform-aware executable name
             const exeName = process.platform === 'win32' ? 'evertext_brain.exe' : 'evertext_brain';
-            const brainPath = path.join(__dirname, '../evertext_brain/target/release', exeName);
+
+            // Try to resolve path relative to current executable (CAXA/Pkg) or source (Dev)
+            // In CAXA, process.execPath is the exe itself, but we need the temp directory where resources are extracted.
+            // However, caxa extraction puts things in a temp folder.
+
+            // Common pattern: check adjacent to source first
+            let brainPath = path.join(__dirname, '../evertext_brain/target/release', exeName);
+
+            // Quick check if file exists, if not, try root-relative (for packaged app)
+            // In caxa, __dirname might is inside the snapshot. 
+            // We'll rely on caxa including the directory.
+
+            console.log('[Brain] Resolving Rust brain path...');
+            console.log('[Brain] Candidate 1 (Source relative):', brainPath);
+
+            // Note: in caxa, we will include the folder structure. 
+            // If this fails, we might need a specific caxa check.
 
             console.log('[Brain] Starting Rust brain:', brainPath);
 

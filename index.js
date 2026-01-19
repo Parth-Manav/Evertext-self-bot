@@ -1,4 +1,5 @@
 import { startScheduler, forceStop } from './src/manager.js';
+import { runSetup } from './setup.js';
 import { startBot, client } from './src/bot.js'; // client needed for shutdown
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -69,6 +70,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // --- Main Bootstrap ---
 (async () => {
+    await runSetup(); // Run interactive setup if needed
     await killOrphanedChrome();
 
     // Start Health Check (for Zeabur)

@@ -20,7 +20,7 @@ export class BrowserController {
             // Launch new browser if none provided
             console.log('[Browser] Starting new Chromium process...');
             this.browser = await puppeteer.launch({
-                headless: 'new', // No GUI for Zeabur
+                headless: false, // Visible GUI requested by user
                 timeout: 30000,
                 args: [
                     '--no-sandbox',
@@ -66,6 +66,17 @@ export class BrowserController {
         this.page = await this.context.newPage();
 
         await this.page.setViewport({ width: 800, height: 600 });
+
+        // CLEANUP: Close the initial blank window(s) from the default context
+        // Now that we have our Incognito window open, it's safe to close the others
+        try {
+            const defaultPages = await this.browser.pages();
+            for (const p of defaultPages) {
+                await p.close().catch(() => { });
+            }
+        } catch (e) {
+            console.log('[Browser] Warning: Could not close default page', e.message);
+        }
 
         // Inject session cookie
         if (sessionCookie) {
