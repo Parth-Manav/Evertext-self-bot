@@ -27,14 +27,14 @@ export async function runSetup() {
     });
 
     try {
-        const token = await askQuestion(rl, '1. Enter your DISCORD_TOKEN (Required): ');
+        const token = await askQuestion(rl, '1. Enter your DISCORD_TOKEN (MANDATORY): ');
         if (!token.trim()) {
-            console.error('❌ Error: DISCORD_TOKEN is required!');
+            console.error('❌ Error: DISCORD_TOKEN is required! The bot cannot run without it.');
             process.exit(1);
         }
 
-        const encryptionKey = await askQuestion(rl, '2. Enter an ENCRYPTION_KEY (Optional, press Enter to skip): ');
-        const logChannelId = await askQuestion(rl, '3. Enter LOG_CHANNEL_ID (Required for status updates): ');
+        const encryptionKey = await askQuestion(rl, '2. Enter an ENCRYPTION_KEY (Optional - Press Enter to skip): ');
+        const logChannelId = await askQuestion(rl, '3. Enter LOG_CHANNEL_ID (Optional - Needed for Discord logs): ');
 
         // Construct .env content
         let envContent = `DISCORD_TOKEN=${token.trim()}\n`;

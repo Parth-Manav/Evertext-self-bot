@@ -18,6 +18,7 @@ db.json.backup
 # Let's stick to what was explicitly requested before: db.json.backup.
 
 # Build artifacts
+bot.exe
 evertext_brain/target/
 bin/
 # We created a bin/ folder for the rust exe, that probably shouldn't be in the repo if it contains binaries.
