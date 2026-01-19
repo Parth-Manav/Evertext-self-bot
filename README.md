@@ -2,6 +2,9 @@
 
 A sophisticated Discord bot for automating Evertale game dailies using a **hybrid Puppeteer + WebSocket architecture** with a Rust-based decision engine.
 
+> [!TIP]
+> **Just want to run the bot?** Download `bot.exe` from [Releases](https://github.com/Parth-Manav/Evertext-self-bot/releases) - No installation needed!
+
 ## 🏗️ Architecture Overview
 
 This bot combines the best of both worlds:
