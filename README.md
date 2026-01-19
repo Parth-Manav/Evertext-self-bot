@@ -178,10 +178,11 @@ If you have downloaded the pre-built `bot.exe` or built it yourself:
 1.  **Double-click `bot.exe`**.
 2.  The bot will verify your setup.
 3.  **First time?** It will ask you for:
-    *   `DISCORD_TOKEN`
-    *   `ENCRYPTION_KEY`
-    *   `GUILD_ID`
-4.  It will save these to a `.env` file automatically so you don't have to type them again.
+    - `DISCORD_TOKEN`
+    - `ENCRYPTION_KEY` (Optional)
+    
+    These will be saved to a `.env` file automatically.
+    so you don't have to type them again.
 5.  The bot will launch!
 
 ### Option B: The "Developer" Way (Source Code)

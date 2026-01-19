@@ -34,7 +34,6 @@ export async function runSetup() {
         }
 
         const encryptionKey = await askQuestion(rl, '2. Enter an ENCRYPTION_KEY (Optional, press Enter to skip): ');
-        const guildId = await askQuestion(rl, '3. Enter GUILD_ID (Optional, press Enter to skip): ');
 
         // Construct .env content
         let envContent = `DISCORD_TOKEN=${token.trim()}\n`;
@@ -43,10 +42,6 @@ export async function runSetup() {
             envContent += `ENCRYPTION_KEY=${encryptionKey.trim()}\n`;
         } else {
             console.log('ℹ️ No encryption key provided. Security will be minimal.');
-        }
-
-        if (guildId.trim()) {
-            envContent += `GUILD_ID=${guildId.trim()}\n`;
         }
 
         // Write to .env
