@@ -70,9 +70,12 @@ export class BrowserController {
         // CLEANUP: Close the initial blank window(s) from the default context
         // Now that we have our Incognito window open, it's safe to close the others
         try {
-            const defaultPages = await this.browser.pages();
-            for (const p of defaultPages) {
-                await p.close().catch(() => { });
+            const allPages = await this.browser.pages();
+            for (const p of allPages) {
+                // CRITICAL FIX: Don't close the page we just created!
+                if (p !== this.page) {
+                    await p.close().catch(() => { });
+                }
             }
         } catch (e) {
             console.log('[Browser] Warning: Could not close default page', e.message);

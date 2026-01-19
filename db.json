@@ -6,8 +6,8 @@
       "encryptedCode": "U2FsdGVkX197LLa6QWrYkdGfMMtLxg8EtSi9K9fSGIY=",
       "targetServer": "E-15",
       "serverToggle": true,
-      "lastRun": "2026-01-19T14:17:11.220Z",
-      "status": "error"
+      "lastRun": "2026-01-19T18:38:51.130Z",
+      "status": "done"
     },
     {
       "id": "1768831955273",
@@ -16,12 +16,12 @@
       "targetServer": "E-18",
       "serverToggle": true,
       "lastRun": null,
-      "status": "error"
+      "status": "running"
     }
   ],
   "settings": {
     "scheduleStart": "10:00",
     "scheduleEnd": "20:00",
-    "cookies": "U2FsdGVkX19D9tUGGzBCql5PntJMf9NJ8D/l7F1+E72BPFekX7iSypuKgOWPb+kg876Xm4UWwRxqHQc1JH4eXsKapwAv3GbNY5tDW49IP+JTMyQrpo/HKjWFLeYw4GEae5Yotg9nKkAgsDLQfqfzp3S7usOq9lWv/2jK/nAjD1XICHX6Fkpl5vOPEA45azTov5l1h8Ywy5naI+L3tp9sKE8Jc0sx3ugKNubmHL1n//64ZU4lUYgOlL5DgDvtyqHazu2ncBWEaktzzb9aaEdB3R267nvhjrPhf0PnpOwv9sgAkANWpuFexGzYVKyf3wEsA8RZf0RW6xIYXRpyhrZ72jTrwApMFtzF0HPhsA5ZcgIfa/1+OZUvOSEcYp3JFk2/xHCLHLFfJvEBHzNY/WZIjemVZgBPckh0XQfEIziLkT42Wxvd3OLfFO235yQiNA0Vpk4G9Bv7PSJiTRSu2G99GTALo6NzbQydDLXxECAGVNc15JULd+DhBgQ4LFw/BE4YxLO1M99hPwtznLYibuWtwBudxL3bVKh7dcaMV5wJLdXfS07DpRffDzzfwz7/C9HMUK4mB37TGm436ZUy84WS8Chqph2Oe+v8pcw5RmcXseI="
+    "cookies": "U2FsdGVkX19uz9+A2fLQBPyFevY0q6eKuGLQpscKRz605+Ms5gSmQJkprys1GrBNQqWRtbVLQcxu89q0T5uBLJo0hRP9zO4Eq6iRWxx68VDhbaUW/OfifQ1Xi05Xwr8smiFF2VVCOkc/1gweQTlos3p9m4bsX8fcSPr1ltZWE5P1MOXx6r5jA84vkNhC7XujH3NWbf934Q7nphM7jAYfV7exr+uuU+zSrQok6i2yUK9G2NlN04T7zP6bokE4cvx5KeU/aLIlPE5dJYJWdpOpO0vxzvZDsHA0OduVRmUSMnUbkSEGCTtDmPLQ1S5tRdWyWUnFVdXmSVUC5KkCPp+3MlttVbFAi15i7WEqD6ZDUj0JfgZ1Wv/QoQmQqB8vrgjzrHB4nMnoZtmjbEn/XEEREFvUVrnK/kOQrZv63dpFJ0+EI+NFTR7qA+OL5718BZ0ao16q6OeVOoJL3rZTC6JhB0zei5xVWLY032iDRUHd8X0dksk5XJUsKAEzL8WLnnJvLnJz9gd22IjJYgTJPKBqKicuUhjBOC1Yv6AB6nho0jqs35qlStpwPcihLIugL9vCaG8Wf0w3frtRQB+nLJrNNlol7ny9hLuJySJjeyhWBN0="
   }
 }
