@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx caxa --input . --output bot.exe -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/index.js\""
+    "build": "npx caxa --input . --output bot.exe --exclude bot.exe .git logs node_modules/.bin -- \"{{caxa}}/node.exe\" \"{{caxa}}/index.js\""
   },
   "keywords": [],
   "author": "",

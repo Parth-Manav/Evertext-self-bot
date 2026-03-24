@@ -27,17 +27,26 @@ export const startScheduler = () => {
     // Clean old logs on startup
     rotateLogs().catch(err => console.error('[Manager] Log rotation error:', err));
 
-    // Daily reset at 00:00 IST (Asia/Kolkata timezone)
-    cron.schedule('0 0 * * *', async () => {
-        const triggerTime = new Date();
-        console.log(`[Manager] Daily reset triggered at ${triggerTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`);
-        await resetAllStatuses();
-        deferredAccounts.clear(); // Clear defer timestamps
-        deferCycles.clear(); // Clear defer cycle counts
-        sendLog('🔄 **Daily Reset**: All accounts reset to pending status', 'info');
+    // Daily reset check every minute to prevent drift downtime (Asia/Kolkata timezone)
+    cron.schedule('* * * * *', async () => {
+        const { getLastResetDate, setLastResetDate } = await import('./db.js');
+        const nowInIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const todayStr = nowInIST.toISOString().split('T')[0]; // YYYY-MM-DD in IST
+        
+        const lastReset = await getLastResetDate();
+        if (!lastReset || new Date(todayStr) > new Date(lastReset)) {
+            console.log(`[Manager] 📅 Daily reset triggered for ${todayStr} IST (Previous: ${lastReset})`);
+            
+            await resetAllStatuses();
+            await setLastResetDate(todayStr);
 
-        // Start processing queue automatically
-        await processQueueFull();
+            deferredAccounts.clear(); // Clear defer timestamps
+            deferCycles.clear(); // Clear defer cycle counts
+            sendLog('🔄 **Daily Reset**: All accounts reset to pending status', 'info');
+
+            // Start processing queue automatically
+            await processQueueFull();
+        }
     }, {
         timezone: 'Asia/Kolkata'
     });
@@ -145,11 +154,9 @@ const processQueueFull = async () => {
                     }
 
                 } else {
-                    // ... (Failed logic)
-                    console.log(`[Manager] ❌ ${account.name} failed: ${result.reason}`);
-                    await updateAccountStatus(account.id, 'error');
-                    await sendLog(`❌ **${account.name}**: Failed - ${result.reason}`, 'error');
+                    // Normal Failure - THROW into Catch block for Retries!
                     sharedBrowser = result.browser;
+                    throw new Error(result.reason || "Unknown Session Error");
                 }
 
             } catch (err) {
@@ -247,11 +254,14 @@ export const runBatch = async (accounts) => {
 
 export const executeSession = async (accountId) => {
     // For manual /force_run {name}
+    const release = await lock.acquire();
     if (isRunning) {
+        release();
         return { success: false, message: 'Bot is already running a queue' };
     }
 
     isRunning = true;
+    release();
     let browser = null;
 
     try {
@@ -294,11 +304,14 @@ export const executeSession = async (accountId) => {
 
 export const executeFountain = async (accountId) => {
     // For manual /fountain {name}
+    const release = await lock.acquire();
     if (isRunning) {
+        release();
         return { success: false, message: 'Bot is already running a queue' };
     }
 
     isRunning = true;
+    release();
     let browser = null;
 
     try {

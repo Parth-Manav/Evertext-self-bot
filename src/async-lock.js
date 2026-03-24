@@ -7,11 +7,12 @@ export class AsyncLock {
 
     async acquire() {
         return new Promise((resolve) => {
+            const releaseFn = () => this.release();
             if (!this.locked) {
                 this.locked = true;
-                resolve();
+                resolve(releaseFn);
             } else {
-                this.queue.push(resolve);
+                this.queue.push(() => resolve(releaseFn));
             }
         });
     }

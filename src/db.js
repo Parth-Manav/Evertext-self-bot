@@ -2,13 +2,26 @@ import { JSONFilePreset } from 'lowdb/node';
 import CryptoJS from 'crypto-js';
 import dotenv from 'dotenv';
 import fs from 'fs/promises';
+import { AsyncLock } from './async-lock.js';
 
 dotenv.config();
 
-const defaultData = { accounts: [], settings: { scheduleStart: '10:00', scheduleEnd: '20:00' } };
+const dbLock = new AsyncLock();
+
+const defaultData = { accounts: [], settings: { scheduleStart: '10:00', scheduleEnd: '20:00', lastResetDate: '' } };
 const db = await JSONFilePreset('db.json', defaultData);
 
-const SECRET_KEY = process.env.ENCRYPTION_KEY || 'default_secret_please_change';
+let SECRET_KEY = process.env.ENCRYPTION_KEY;
+if (!SECRET_KEY || SECRET_KEY === 'default_secret_please_change') {
+  SECRET_KEY = CryptoJS.lib.WordArray.random(32).toString(CryptoJS.enc.Hex);
+  try {
+    const envContent = `\nENCRYPTION_KEY=${SECRET_KEY}\n`;
+    await fs.appendFile('.env', envContent);
+    console.log('[DB] ⚠️ Generated and saved a new secure ENCRYPTION_KEY to .env');
+  } catch (err) {
+    console.error('[DB] ❌ Failed to write ENCRYPTION_KEY to .env', err);
+  }
+}
 
 // In-memory cache to reduce file reads (Issue #27 fix)
 let dbCache = null;
@@ -79,8 +92,10 @@ export const isEncrypted = (text) => {
 };
 
 export const migrateUnencryptedCodes = async () => {
-  await db.read();
-  let migratedCount = 0;
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
+    let migratedCount = 0;
 
   for (const account of db.data.accounts) {
     if (!isEncrypted(account.encryptedCode)) {
@@ -97,11 +112,15 @@ export const migrateUnencryptedCodes = async () => {
     console.log('[DB] No migration needed. All codes are encrypted.');
   }
 
+  release();
   return migratedCount;
+  } catch(e) { release(); throw e; }
 };
 
 export const addAccount = async (name, encryptedCode, targetServer, serverToggle = true) => {
-  await db.read();
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
 
   // Prevent duplicate names
   if (db.data.accounts.find(acc => acc.name === name)) {
@@ -127,7 +146,9 @@ export const addAccount = async (name, encryptedCode, targetServer, serverToggle
   }
 
   await writeAndInvalidate();
+  release();
   return true;
+  } catch(e) { release(); throw e; }
 };
 
 export const getAccounts = async () => {
@@ -136,21 +157,29 @@ export const getAccounts = async () => {
 };
 
 export const removeAccount = async (name) => {
-  await db.read();
-  const initialLength = db.data.accounts.length;
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
+    const initialLength = db.data.accounts.length;
   db.data.accounts = db.data.accounts.filter(a => a.name !== name);
   await writeAndInvalidate();
+  release();
   return db.data.accounts.length < initialLength;
+  } catch(e) { release(); throw e; }
 };
 
 export const updateAccountStatus = async (id, status, lastRun = null) => {
-  await db.read();
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
   const account = db.data.accounts.find(a => a.id === id);
   if (account) {
     account.status = status;
     if (lastRun) account.lastRun = lastRun;
     await writeAndInvalidate();
   }
+  release();
+  } catch(e) { release(); throw e; }
 };
 
 export const getAccountDecrypted = async (id) => {
@@ -171,14 +200,20 @@ export const getSchedule = async () => {
 };
 
 export const setSchedule = async (start, end) => {
-  await db.read();
-  db.data.settings = { ...db.data.settings, scheduleStart: start, scheduleEnd: end };
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
+    db.data.settings = { ...db.data.settings, scheduleStart: start, scheduleEnd: end };
   await writeAndInvalidate();
+  release();
   return db.data.settings;
+  } catch(e) { release(); throw e; }
 };
 
 export const setCookies = async (cookies) => {
-  await db.read();
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
 
   // Check if already encrypted to prevent double encryption
   let encryptedCookies;
@@ -191,7 +226,9 @@ export const setCookies = async (cookies) => {
 
   db.data.settings = { ...db.data.settings, cookies: encryptedCookies };
   await writeAndInvalidate();
+  release();
   return true;
+  } catch(e) { release(); throw e; }
 };
 
 export const getAdminRole = async () => {
@@ -200,10 +237,14 @@ export const getAdminRole = async () => {
 };
 
 export const setAdminRole = async (roleId) => {
-  await db.read();
-  db.data.settings = { ...db.data.settings, adminRoleId: roleId };
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
+    db.data.settings = { ...db.data.settings, adminRoleId: roleId };
   await writeAndInvalidate();
+  release();
   return true;
+  } catch(e) { release(); throw e; }
 };
 
 export const getLogChannel = async () => {
@@ -212,23 +253,33 @@ export const getLogChannel = async () => {
 };
 
 export const setLogChannel = async (channelId) => {
-  await db.read();
-  db.data.settings = { ...db.data.settings, logChannelId: channelId };
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
+    db.data.settings = { ...db.data.settings, logChannelId: channelId };
   await writeAndInvalidate();
+  release();
   return true;
+  } catch(e) { release(); throw e; }
 };
 
 export const resetAllStatuses = async () => {
-  await db.read();
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
   for (const account of db.data.accounts) {
     account.status = 'pending';
   }
   await writeAndInvalidate();
   console.log('[DB] All account statuses reset to pending');
+  release(); // Added release
+  } catch(e) { release(); throw e; } // Added release
 };
 
 export const resetErrorStatuses = async () => {
-  await db.read();
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
   let count = 0;
   for (const account of db.data.accounts) {
     if (account.status === 'error') {
@@ -240,27 +291,34 @@ export const resetErrorStatuses = async () => {
     await writeAndInvalidate();
   }
   console.log(`[DB] Reset ${count} error statuses to pending`);
+  release();
   return count;
+  } catch(e) { release(); throw e; }
 };
 
 export const getCookies = async () => {
-  await db.read();
-  const cookies = db.data.settings?.cookies;
+  const release = await dbLock.acquire();
+  let cookies;
+  try {
+    await db.read();
+    cookies = db.data.settings?.cookies;
+  } catch(e) {
+    release();
+    throw e;
+  }
+  release();
+
   if (!cookies) return null;
 
   try {
     // Attempt to decrypt
     const decrypted = decrypt(cookies);
-    // If decryption results in empty string, it failed or key is wrong
     if (!decrypted || decrypted.length === 0) {
       console.warn('[DB] Cookie decryption failed (empty result). Returning null.');
       return null;
     }
     return decrypted;
   } catch (e) {
-    // If decryption throws, it might be legacy plain text?
-    // But decrypt() wraps CryptoJS which usually doesn't throw on simple bad key, it returns Malformed.
-    // If we assume strict encryption now, we should check if it LOOKS encrypted.
     if (isEncrypted(cookies)) {
       console.warn('[DB] Cookie decryption failed. Returning null.');
       return null; // Don't return garbage
@@ -271,5 +329,21 @@ export const getCookies = async () => {
 
 // Run migration on module load to fix any existing plain-text codes
 await migrateUnencryptedCodes();
+
+export const getLastResetDate = async () => {
+  const data = await getCachedData();
+  return data.settings?.lastResetDate || '';
+};
+
+export const setLastResetDate = async (dateStr) => {
+  const release = await dbLock.acquire();
+  try {
+    await db.read();
+    db.data.settings = { ...db.data.settings, lastResetDate: dateStr };
+    await writeAndInvalidate();
+    release();
+    return true;
+  } catch(e) { release(); throw e; }
+};
 
 export { db };

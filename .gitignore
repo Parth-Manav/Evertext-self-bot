@@ -20,14 +20,14 @@ db.json.backup
 
 # Build artifacts
 bot.exe
+node.exe
 evertext_brain/target/
 bin/
 # We created a bin/ folder for the rust exe, that probably shouldn't be in the repo if it contains binaries.
 # But wait, if the user wants to distribute it... usually binaries aren't committed.
 # But for "self-bot" maybe they want it? 
 # Best practice: Ignore binaries.
-*.exe
-*.pdb
+# NOTE: Don't use *.exe because it will ignore the Rust brain binary too!
 
 # Editor
 .vscode/

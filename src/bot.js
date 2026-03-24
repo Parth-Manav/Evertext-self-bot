@@ -97,7 +97,7 @@ client.on('interactionCreate', async interaction => {
 
     try {
         // --- Permission Check ---
-        const sensitiveCommands = ['add_account', 'remove_account', 'set_schedule', 'set_cookies', 'force_run_again_all', 'force_run_error_all_again', 'force_run_all', 'force_stop_all', 'set_admin_role', 'set_log_channel', 'mute_bot', 'unmute_bot'];
+        const sensitiveCommands = ['add_account', 'remove_account', 'set_schedule', 'set_cookies', 'force_run_again_all', 'force_run_error_all_again', 'force_run_all', 'force_stop_all', 'set_admin_role', 'set_log_channel', 'mute_bot', 'unmute_bot', 'force_run', 'list_accounts'];
         if (sensitiveCommands.includes(commandName)) {
             const adminRoleId = await getAdminRole();
             const hasAdminRole = adminRoleId && interaction.member.roles.cache.has(adminRoleId);

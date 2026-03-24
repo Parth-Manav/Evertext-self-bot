@@ -95,10 +95,12 @@ impl BotSession {
         self.history.push_str(content);
         if self.history.len() > 15000 {
             let drain_len = self.history.len() - 10000;
-            let mut safe_drain = drain_len;
-            while !self.history.is_char_boundary(safe_drain) && safe_drain > 0 {
-                safe_drain -= 1;
-            }
+            // UTF-8 can be up to 4 bytes. We go backward at most 4 bytes to find the boundary.
+            let safe_drain = (0..=3)
+                .map(|i| drain_len.saturating_sub(i))
+                .find(|&i| self.history.is_char_boundary(i))
+                .unwrap_or(0);
+                
             if safe_drain > 0 {
                 self.history.drain(..safe_drain);
             }
@@ -241,7 +243,7 @@ impl BotSession {
                     }
                 }
                 // Session complete
-                else if current.contains("Press y to perform more commands") {
+                else if current.contains("Process ended with return code 0") {
                     self.state = BotState::Finished;
                     OutputCommand::CloseTerminal {
                         reason: "Session complete".to_string(),
@@ -294,7 +296,7 @@ impl BotSession {
             }
 
             BotState::AlternateEventFlow => {
-                if current.contains("Press y to perform more commands") {
+                if current.contains("Process ended with return code 0") {
                     self.state = BotState::Finished;
                     OutputCommand::CloseTerminal {
                         reason: "Session complete (alternate flow)".to_string(),

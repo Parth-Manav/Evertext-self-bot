@@ -15,13 +15,13 @@ async function killOrphanedChrome() {
     try {
         console.log('[Startup] Checking for orphaned Chrome processes...');
         const isWindows = process.platform === 'win32';
-        const command = isWindows ? 'tasklist | findstr chrome.exe' : 'ps aux | grep chrome | grep -v grep';
+        const command = isWindows ? 'wmic process where "name=\'chrome.exe\' and commandline like \'%--headless%\'" get processid' : 'ps aux | grep chrome | grep headless | grep -v grep';
 
         const { stdout } = await execAsync(command).catch(() => ({ stdout: '' }));
 
-        if (stdout.includes('chrome')) {
-            console.log('[Startup] ⚠️  Found orphaned Chrome processes. Killing...');
-            const killCmd = isWindows ? 'taskkill /F /IM chrome.exe /T' : 'pkill -9 chrome';
+        if (stdout.length > 5 && (stdout.includes('chrome') || stdout.match(/\d+/))) {
+            console.log('[Startup] ⚠️  Found orphaned headless Chrome processes. Killing...');
+            const killCmd = isWindows ? 'wmic process where "name=\'chrome.exe\' and commandline like \'%--headless%\'" call terminate' : 'pkill -9 -f "chrome.*--headless"';
             await execAsync(killCmd).catch(() => { }); // Ignore errors if already dead
             console.log('[Startup] ✅ Killed orphaned Chrome processes');
             await new Promise(r => setTimeout(r, 2000));

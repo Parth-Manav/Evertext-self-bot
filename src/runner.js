@@ -214,6 +214,10 @@ export const runSession = async (account, sharedBrowser = null) => {
                 await wsClient.connect();
                 console.log('[Runner] Re-connected! Waiting 2s for data...');
                 await new Promise(r => setTimeout(r, config.BROWSER_RECONNECT_WAIT_MS));
+                
+                if (terminalBuffer.length === 0) {
+                     throw new Error('Terminal failed to deliver output after WebSocket reconnect');
+                }
             }
             // -----------------------------------------
         } else {
