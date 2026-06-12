@@ -126,7 +126,7 @@ client.on('interactionCreate', async interaction => {
             const isDiscordAdmin = interaction.memberPermissions.has('Administrator');
 
             if (!hasAdminRole && !isDiscordAdmin) {
-                await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+                await interaction.reply({ content: ' You do not have permission to use this command.', ephemeral: true });
                 return;
             }
         }
@@ -139,7 +139,7 @@ client.on('interactionCreate', async interaction => {
 
             // Logic Validation
             if (serverToggle && !server) {
-                await interaction.reply({ content: '❌ **Error**: You set `Server Selection: True`, so you MUST provide a `Target Server`!', ephemeral: true });
+                await interaction.reply({ content: ' **Error**: You set `Server Selection: True`, so you MUST provide a `Target Server`!', ephemeral: true });
                 return;
             }
 
@@ -150,7 +150,7 @@ client.on('interactionCreate', async interaction => {
             // Encrypt the code before storing
             const encryptedCode = encrypt(code);
             await addAccount(name, encryptedCode, server, serverToggle);
-            await interaction.reply({ content: `✅ Account **${name.trim()}** added!\nServer Selection: **${serverToggle ? 'Enabled' : 'Disabled'}**\nTarget: ${server.trim()}`, ephemeral: true });
+            await interaction.reply({ content: ` Account **${name.trim()}** added!\nServer Selection: **${serverToggle ? 'Enabled' : 'Disabled'}**\nTarget: ${server.trim()}`, ephemeral: true });
         }
         else if (commandName === 'list_accounts') {
             const accounts = await getAccounts();
@@ -209,7 +209,7 @@ client.on('interactionCreate', async interaction => {
                     interaction.followUp(`Batch session for **ALL** accounts finished.`).catch(err => logger.error('FollowUp error:', err));
                 }).catch(err => {
                     logger.error('Batch run error:', err);
-                    interaction.followUp(`❌ Batch run encountered an error: ${err.message}`).catch(err => logger.error('FollowUp error:', err));
+                    interaction.followUp(` Batch run encountered an error: ${err.message}`).catch(err => logger.error('FollowUp error:', err));
                 });
                 return;
             }
@@ -231,11 +231,11 @@ client.on('interactionCreate', async interaction => {
                 }
             }).catch(err => {
                 logger.error(`Session execution error for ${name}:`, err);
-                interaction.followUp(`❌ Critical error running session for **${name}**: ${err.message}`).catch(err => logger.error('FollowUp error:', err));
+                interaction.followUp(` Critical error running session for **${name}**: ${err.message}`).catch(err => logger.error('FollowUp error:', err));
             });
         }
         else if (commandName === 'force_run_again_all') {
-            await interaction.reply('🔄 **Resetting all accounts and restarting queue...**');
+            await interaction.reply(' **Resetting all accounts and restarting queue...**');
             await resetAllStatuses();
 
             // Start batch
@@ -246,11 +246,11 @@ client.on('interactionCreate', async interaction => {
         else if (commandName === 'force_run_error_all_again') {
             const count = await resetErrorStatuses();
             if (count === 0) {
-                await interaction.reply({ content: '✅ No accounts found that are not "done".', ephemeral: true });
+                await interaction.reply({ content: ' No accounts found that are not "done".', ephemeral: true });
                 return;
             }
 
-            await interaction.reply(`🔄 **Resetting ${count} non-completed accounts and restarting queue...**`);
+            await interaction.reply(` **Resetting ${count} non-completed accounts and restarting queue...**`);
 
             // Start batch
             setImmediate(() => {
@@ -264,17 +264,17 @@ client.on('interactionCreate', async interaction => {
             const isDiscordAdmin = interaction.memberPermissions.has('Administrator');
 
             if (!hasAdminRole && !isDiscordAdmin) {
-                await interaction.reply({ content: '❌ Admin permission required.', ephemeral: true });
+                await interaction.reply({ content: ' Admin permission required.', ephemeral: true });
                 return;
             }
 
             const accounts = await getAccounts();
-            await interaction.reply(`🚀 Starting ALL accounts (${accounts.length}) in queue...`);
+            await interaction.reply(` Starting ALL accounts (${accounts.length}) in queue...`);
 
             runBatch(accounts).then(() => {
-                interaction.followUp(`✅ Queue complete - all accounts processed.`).catch(err => logger.error('FollowUp error:', err));
+                interaction.followUp(` Queue complete - all accounts processed.`).catch(err => logger.error('FollowUp error:', err));
             }).catch(err => {
-                interaction.followUp(`❌ Queue error: ${err.message}`).catch(err => logger.error('FollowUp error:', err));
+                interaction.followUp(` Queue error: ${err.message}`).catch(err => logger.error('FollowUp error:', err));
             });
         }
         else if (commandName === 'force_stop_all') {
@@ -284,17 +284,17 @@ client.on('interactionCreate', async interaction => {
             const isDiscordAdmin = interaction.memberPermissions.has('Administrator');
 
             if (!hasAdminRole && !isDiscordAdmin) {
-                await interaction.reply({ content: '❌ Admin permission required.', ephemeral: true });
+                await interaction.reply({ content: ' Admin permission required.', ephemeral: true });
                 return;
             }
 
             forceStop();
-            await interaction.reply('🛑 **KILL-SWITCH ACTIVATED** - All processes will stop at next checkpoint.');
+            await interaction.reply(' **KILL-SWITCH ACTIVATED** - All processes will stop at next checkpoint.');
         }
         else if (commandName === 'set_log_channel') {
             // Admin check
             if (!interaction.memberPermissions.has('Administrator')) {
-                await interaction.reply({ content: '❌ Admin permission required.', ephemeral: true });
+                await interaction.reply({ content: ' Admin permission required.', ephemeral: true });
                 return;
             }
 
@@ -302,7 +302,7 @@ client.on('interactionCreate', async interaction => {
             if (!channel) throw new ValidationError('Invalid channel specified.');
 
             await setLogChannel(channel.id);
-            await interaction.reply({ content: `✅ Log channel set to <#${channel.id}>. All bot notifications will be sent here.`, ephemeral: true });
+            await interaction.reply({ content: ` Log channel set to <#${channel.id}>. All bot notifications will be sent here.`, ephemeral: true });
         }
         else if (commandName === 'mute_bot' || commandName === 'unmute_bot') {
             // Admin check
@@ -311,12 +311,12 @@ client.on('interactionCreate', async interaction => {
             const isDiscordAdmin = interaction.memberPermissions.has('Administrator');
 
             if (!hasAdminRole && !isDiscordAdmin) {
-                await interaction.reply({ content: '❌ Admin permission required.', ephemeral: true });
+                await interaction.reply({ content: ' Admin permission required.', ephemeral: true });
                 return;
             }
 
             const action = commandName === 'mute_bot' ? 'muted' : 'unmuted';
-            await interaction.reply({ content: `✅ Bot messages ${action}`, ephemeral: true });
+            await interaction.reply({ content: ` Bot messages ${action}`, ephemeral: true });
         }
         else if (commandName === 'remove_account') {
             const name = requireTrimmedString(interaction.options.getString('name'), 'Account name', MAX_ACCOUNT_NAME_LENGTH);
@@ -343,7 +343,7 @@ client.on('interactionCreate', async interaction => {
             const endStr = `${end.toString().padStart(2, '0')}:00`;
 
             await setSchedule(startStr, endStr);
-            await interaction.reply({ content: `✅ Schedule updated! Active hours: **${startStr}** to **${endStr}**` });
+            await interaction.reply({ content: ` Schedule updated! Active hours: **${startStr}** to **${endStr}**` });
         }
         else if (commandName === 'set_cookies') {
             const cookies = interaction.options.getString('cookies')?.trim();
@@ -354,12 +354,12 @@ client.on('interactionCreate', async interaction => {
                 throw new ValidationError(`Cookie string must be ${MAX_COOKIE_LENGTH} characters or less.`);
             }
             await setCookies(cookies);
-            await interaction.reply({ content: '✅ Global session cookies updated! New sessions will use these cookies.', ephemeral: true });
+            await interaction.reply({ content: ' Global session cookies updated! New sessions will use these cookies.', ephemeral: true });
         }
         else if (commandName === 'set_admin_role') {
             // Check Discord Admin permissions
             if (!interaction.memberPermissions.has('Administrator')) {
-                await interaction.reply({ content: '❌ Only Server Administrators can use this command.', ephemeral: true });
+                await interaction.reply({ content: ' Only Server Administrators can use this command.', ephemeral: true });
                 return;
             }
 
@@ -367,15 +367,15 @@ client.on('interactionCreate', async interaction => {
             if (!role) throw new ValidationError('Invalid role specified.');
 
             await setAdminRole(role.id);
-            await interaction.reply({ content: `✅ Admin role set to **${role.name}**. Users with this role can now manage the bot.` });
+            await interaction.reply({ content: ` Admin role set to **${role.name}**. Users with this role can now manage the bot.` });
         }
     } catch (error) {
         logger.error('Interaction Error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred.';
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: `❌ Error: ${errorMessage}`, ephemeral: true }).catch(err => logger.error('FollowUp error:', err));
+            await interaction.followUp({ content: ` Error: ${errorMessage}`, ephemeral: true }).catch(err => logger.error('FollowUp error:', err));
         } else {
-            await interaction.reply({ content: `❌ Error: ${errorMessage}`, ephemeral: true }).catch(err => logger.error('FollowUp error:', err));
+            await interaction.reply({ content: ` Error: ${errorMessage}`, ephemeral: true }).catch(err => logger.error('FollowUp error:', err));
         }
     }
 });
@@ -438,7 +438,7 @@ export const sendLog = async (message, type = 'info') => {
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
             await channel.send({ embeds: [embed] });
-            logger.debug('✅ Message sent to Discord!');
+            logger.debug(' Message sent to Discord!');
             return; // Success - exit
         } catch (err) {
             logger.warn(`Attempt ${attempt}/3 failed:`, err.message);

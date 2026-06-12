@@ -12,6 +12,14 @@ import fs from 'fs/promises';
 import { AsyncLock } from './async-lock.js';
 import { createLogger } from './logger.js';
 import { ValidationError } from './errors.js';
+import {
+  isPostgresEnabled,
+  recordAccountRemoved,
+  recordAccountStatus,
+  syncAutomationAccounts,
+  getAccountsFromDb,
+  getSettingFromDb
+} from './storage/postgres.js';
 import { ACCOUNT_STATUS } from './constants.js';
 
 dotenv.config();
@@ -204,6 +212,9 @@ export const addAccount = async (name, encryptedCode, targetServer, serverToggle
  * @returns {Promise<Array<import('./types.js').Account>>} List of accounts.
  */
 export const getAccounts = async () => {
+  if (isPostgresEnabled()) {
+    return await getAccountsFromDb();
+  }
   const data = await getCachedData();
   return data.accounts;
 };
@@ -279,6 +290,28 @@ export const getAccountDecrypted = async (id) => {
 export const getSchedule = async () => {
   const data = await getCachedData();
   return data.settings || { scheduleStart: '10:00', scheduleEnd: '20:00' };
+};
+
+/**
+ * Gets a global configuration value.
+ * @param {string} key - Settings key.
+ * @returns {Promise<string|null>}
+ */
+export const getSetting = async (key) => {
+  if (isPostgresEnabled()) {
+    const pgKeyMapping = {
+      scheduleStart: 'schedule_start',
+      scheduleEnd: 'schedule_end',
+      lastResetDate: 'last_reset_date',
+      cookies: 'cookies',
+      adminRoleId: 'admin_role_id',
+      logChannelId: 'log_channel_id'
+    };
+    const pgKey = pgKeyMapping[key] || key;
+    return await getSettingFromDb(pgKey);
+  }
+  const data = await getCachedData();
+  return data.settings?.[key] || null;
 };
 
 /**

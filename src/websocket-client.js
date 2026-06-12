@@ -73,7 +73,7 @@ export class EvertextWebSocketClient extends EventEmitter {
                 logger.info('Connection opened, waiting for handshake...');
             });
 
-            // Socket.IO event chain: open (0) → namespace (40) → events (42) → ping/pong (2/3)
+            // Socket.IO event chain: open (0)  namespace (40)  events (42)  ping/pong (2/3)
             this.ws.on('message', (rawMessage) => {
                 clearTimeout(timeout);
                 const message = rawMessage.toString();
@@ -213,10 +213,10 @@ export class EvertextWebSocketClient extends EventEmitter {
      * @throws {Error} If the socket is not connected.
      */
     async sendCommand(command) {
-        logger.debug(`📤 Attempting to send command: "${command}"`);
+        logger.debug(` Attempting to send command: "${command}"`);
 
         if (!this.ws) {
-            logger.error('❌ WebSocket object is null');
+            logger.error(' WebSocket object is null');
             throw new Error('WebSocket not initialized');
         }
 
@@ -225,18 +225,18 @@ export class EvertextWebSocketClient extends EventEmitter {
         logger.debug(`Connection state: ${stateNames[state]} (${state})`);
 
         if (!this.connected || state !== WebSocket.OPEN) {
-            logger.error(`❌ Cannot send - not connected (state: ${stateNames[state]})`);
+            logger.error(` Cannot send - not connected (state: ${stateNames[state]})`);
             throw new Error('WebSocket not connected');
         }
 
         const payload = JSON.stringify(['input', { input: command }]);
-        logger.debug(`📡 Sending payload: ${payload}`);
+        logger.debug(` Sending payload: ${payload}`);
 
         try {
             this.ws.send('42' + payload);
-            logger.debug(`✅ Command sent successfully`);
+            logger.debug(` Command sent successfully`);
         } catch (err) {
-            logger.error(`❌ Failed to send: ${err.message}`);
+            logger.error(` Failed to send: ${err.message}`);
             throw err;
         }
 

@@ -11,9 +11,11 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { startHealthServer } from './src/health-server.js';
 import { createLogger } from './src/logger.js';
+import { closePostgres, markInterruptedWork, runMigrations, syncFromLowdbIfEmpty } from './src/storage/postgres.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('main');
+const processStartedAt = new Date();
 
 logger.info('Starting Hybrid Terminal Automation Framework...');
 
@@ -71,6 +73,8 @@ async function gracefulShutdown(signal) {
     // Wait for ongoing cleanups
     await new Promise(r => setTimeout(r, 2000));
 
+    await closePostgres();
+
     logger.info('Cleanup complete. Exiting...');
     process.exit(0);
 }
@@ -90,6 +94,17 @@ process.on('unhandledRejection', (reason, promise) => {
 (async () => {
     try {
         await runSetup(); // Run interactive setup if needed
+        await runMigrations();
+        await syncFromLowdbIfEmpty();
+
+        const interrupted = await markInterruptedWork(processStartedAt);
+        if (interrupted.accounts > 0 || interrupted.jobs > 0 || interrupted.queueRuns > 0) {
+            logger.warn(
+                `Recovered stale PostgreSQL running state: ` +
+                `${interrupted.accounts} account(s), ${interrupted.jobs} job(s), ${interrupted.queueRuns} queue run(s) marked interrupted`
+            );
+        }
+
         await killOrphanedChrome();
 
         // Start Health Check (for Zeabur)

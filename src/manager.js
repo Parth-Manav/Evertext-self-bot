@@ -15,6 +15,13 @@ import { updateActivity, updateHealthState } from './health-server.js';
 import { rotateLogs } from './log-rotator.js';
 import { createLogger } from './logger.js';
 import {
+    finishQueueRun,
+    finishTaskJob,
+    recordTaskAttempt,
+    startQueueRun,
+    startTaskJob
+} from './storage/postgres.js';
+import {
     ZIGZA_DEFER_DELAY_MS,
     ACCOUNT_STATUS,
     MS_PER_MINUTE,
@@ -48,12 +55,16 @@ const deferredAccounts = new Map();
  */
 const deferCycles = new Map();
 
+function getErrorCode(err) {
+    return err && typeof err === 'object' && 'code' in err ? err.code : null;
+}
+
 /**
  * Activates the kill-switch, signaling the queue processor to stop accepting
  * new accounts and exit cleanly after the current session.
  */
 export const forceStop = () => {
-    logger.warn('🛑 FORCE STOP activated');
+    logger.warn(' FORCE STOP activated');
     shouldStop = true;
 };
 
@@ -78,17 +89,17 @@ export const startScheduler = () => {
         
         const lastReset = await getLastResetDate();
         if (!lastReset || new Date(todayStr) > new Date(lastReset)) {
-            logger.info(`📅 Daily reset triggered for ${todayStr} IST (Previous: ${lastReset})`);
+            logger.info(` Daily reset triggered for ${todayStr} IST (Previous: ${lastReset})`);
             
             await resetAllStatuses();
             await setLastResetDate(todayStr);
 
             deferredAccounts.clear(); // Clear defer timestamps
             deferCycles.clear(); // Clear defer cycle counts
-            sendLog('🔄 **Daily Reset**: All accounts reset to pending status', 'info');
+            sendLog(' **Daily Reset**: All accounts reset to pending status', 'info');
 
             // Start processing queue automatically
-            await processQueueFull();
+            await processQueueFull('daily_reset');
         }
     }, {
         timezone: 'Asia/Kolkata'
@@ -96,7 +107,7 @@ export const startScheduler = () => {
 
     // Check queue immediately on startup
     logger.info('Checking queue on startup...');
-    processQueueFull().catch(err => logger.error('Startup queue error:', err));
+    processQueueFull('startup').catch(err => logger.error('Startup queue error:', err));
 };
 
 /**
@@ -104,7 +115,7 @@ export const startScheduler = () => {
  * Implements intelligent retries, Zigza defer handling, and browser instance reuse.
  * @returns {Promise<void>}
  */
-const processQueueFull = async () => {
+const processQueueFull = async (triggerType = 'scheduled') => {
     // Acquire lock to prevent race condition
     await lock.acquire();
 
@@ -120,7 +131,10 @@ const processQueueFull = async () => {
     shouldStop = false;
     let sharedBrowser = null;
     const retryCounts = new Map(); // Track retries per account
+    const jobIds = new Map();
     const MAX_RETRY_ATTEMPTS = config.MAX_RETRY_ATTEMPTS;
+    let queueRunId = null;
+    let queueRunStatus = 'success';
 
     try {
         const accounts = await getAccounts();
@@ -133,15 +147,17 @@ const processQueueFull = async () => {
         }
 
         logger.info(`Processing ${pendingAccounts.length} accounts...`);
-        await sendLog(`▶️ **Queue Started**: Processing ${pendingAccounts.length} accounts`, 'info');
+        await sendLog(` **Queue Started**: Processing ${pendingAccounts.length} accounts`, 'info');
+        queueRunId = await startQueueRun(triggerType);
 
         for (let i = 0; i < pendingAccounts.length; i++) {
             // --- Kill-switch ---
             // forceStop() sets shouldStop=true. We check at the top of each iteration so the
             // currently running session finishes cleanly, but no further accounts are started.
             if (shouldStop) {
-                logger.warn('🛑 Kill-switch activated - stopping queue');
-                await sendLog('🛑 **Queue Stopped**: Force stop activated', 'error');
+                logger.warn(' Kill-switch activated - stopping queue');
+                await sendLog(' **Queue Stopped**: Force stop activated', 'error');
+                queueRunStatus = 'stopped';
                 break;
             }
 
@@ -158,27 +174,49 @@ const processQueueFull = async () => {
                 const deferMinutes = ZIGZA_DEFER_DELAY_MS / MS_PER_MINUTE;
 
                 if (elapsedMinutes < deferMinutes) {
-                    logger.info(`⏭️  Skipping ${account.name} - deferred (${Math.floor(deferMinutes - elapsedMinutes)} min remaining)`);
+                    logger.info(`  Skipping ${account.name} - deferred (${Math.floor(deferMinutes - elapsedMinutes)} min remaining)`);
                     continue; // Skip this account for now
                 } else {
                     // 10 minutes passed, can retry
-                    logger.info(`✅ Retrying ${account.name} - defer wait complete`);
+                    logger.info(` Retrying ${account.name} - defer wait complete`);
                     deferredAccounts.delete(account.id);
                 }
             }
+
+            let jobId = jobIds.get(account.id) || null;
+            let attemptNo = (retryCounts.get(account.id) || 0) + 1;
+            let attemptStartedAt = Date.now();
 
             try {
                 logger.info(`\n[${i + 1}/${pendingAccounts.length}] Processing ${account.name}...`);
                 await updateAccountStatus(account.id, ACCOUNT_STATUS.RUNNING);
 
+                if (!jobId) {
+                    jobId = await startTaskJob({
+                        queueRunId,
+                        account: { ...account, status: ACCOUNT_STATUS.RUNNING }
+                    });
+                    if (jobId) jobIds.set(account.id, jobId);
+                }
+
                 // Run session - pass shared browser
                 updateActivity();
+                attemptStartedAt = Date.now();
                 const result = await runSession(await getAccountDecrypted(account.id), sharedBrowser);
 
                 if (result.success) {
-                    logger.info(`✅ ${account.name} completed successfully`);
+                    logger.info(` ${account.name} completed successfully`);
                     await updateAccountStatus(account.id, ACCOUNT_STATUS.DONE, new Date().toISOString());
-                    await sendLog(`✅ **${account.name}**: Session completed successfully`, 'success');
+
+                    await recordTaskAttempt({
+                        jobId,
+                        attemptNo,
+                        status: 'success',
+                        startedAt: attemptStartedAt
+                    });
+                    await finishTaskJob(jobId, { status: 'success' });
+                    jobIds.delete(account.id);
+                    await sendLog(` **${account.name}**: Session completed successfully`, 'success');
 
                     // Update shared browser reference
                     sharedBrowser = result.browser;
@@ -192,9 +230,23 @@ const processQueueFull = async () => {
                     deferCycles.set(account.id, cycles);
 
                     if (attempts <= MAX_RETRY_ATTEMPTS && cycles <= config.MAX_DEFER_CYCLES) {
-                        logger.warn(`⏭️  ${account.name} deferred (Zigza error) - Attempt ${attempts}/3, Cycle ${cycles}/3`);
+                        logger.warn(`  ${account.name} deferred (Zigza error) - Attempt ${attempts}/3, Cycle ${cycles}/3`);
                         await updateAccountStatus(account.id, ACCOUNT_STATUS.DEFERRED);
-                        await sendLog(`⚠️ **${account.name}**: Deferred (Zigza) - Attempt ${attempts}/3, Cycle ${cycles}/3`, 'warning');
+
+                        await recordTaskAttempt({
+                            jobId,
+                            attemptNo,
+                            status: 'deferred',
+                            startedAt: attemptStartedAt,
+                            deferReason: result.reason || 'Deferred'
+                        });
+                        await finishTaskJob(jobId, {
+                            status: 'deferred',
+                            resultReason: result.reason || 'Deferred'
+                        });
+                        jobIds.delete(account.id);
+
+                        await sendLog(` **${account.name}**: Deferred (Zigza) - Attempt ${attempts}/3, Cycle ${cycles}/3`, 'warning');
 
                         // Mark defer timestamp
                         deferredAccounts.set(account.id, Date.now());
@@ -203,9 +255,23 @@ const processQueueFull = async () => {
 
                         sharedBrowser = result.browser;
                     } else {
-                        logger.error(`❌ ${account.name} failed: Max Zigza retries or defer cycles reached`);
+                        logger.error(` ${account.name} failed: Max Zigza retries or defer cycles reached`);
                         await updateAccountStatus(account.id, ACCOUNT_STATUS.ERROR);
-                        await sendLog(`❌ **${account.name}**: Failed - Max retries/cycles reached`, 'error');
+
+                        await recordTaskAttempt({
+                            jobId,
+                            attemptNo,
+                            status: 'failed',
+                            startedAt: attemptStartedAt,
+                            deferReason: result.reason || 'Max defer cycles reached'
+                        });
+                        await finishTaskJob(jobId, {
+                            status: 'failed',
+                            resultReason: result.reason || 'Max retries/cycles reached'
+                        });
+                        jobIds.delete(account.id);
+
+                        await sendLog(` **${account.name}**: Failed - Max retries/cycles reached`, 'error');
                         sharedBrowser = result.browser;
                     }
 
@@ -221,8 +287,17 @@ const processQueueFull = async () => {
 
                 // Check if we should retry
                 if (attempts <= MAX_RETRY_ATTEMPTS) {
-                    logger.warn(`⚠️ Error for ${account.name} (Attempt ${attempts}/${MAX_RETRY_ATTEMPTS}). Retrying...`);
-                    await sendLog(`🔄 **${account.name}**: Error (${err.message}) - Retry ${attempts}/3`, 'warning');
+                    await recordTaskAttempt({
+                        jobId,
+                        attemptNo,
+                        status: 'failed',
+                        startedAt: attemptStartedAt,
+                        errorCode: getErrorCode(err),
+                        errorMessage: err.message
+                    });
+
+                    logger.warn(` Error for ${account.name} (Attempt ${attempts}/${MAX_RETRY_ATTEMPTS}). Retrying...`);
+                    await sendLog(` **${account.name}**: Error (${err.message}) - Retry ${attempts}/3`, 'warning');
 
                     // Restart browser ONLY if NOT a timeout/login error (as per user request)
                     // If it's a crash or unknown error, we restart. If it's just timeout, we keep browser.
@@ -244,9 +319,24 @@ const processQueueFull = async () => {
                 }
 
                 // If max retries reached:
-                logger.error(`❌ ${account.name} failed after ${MAX_RETRY_ATTEMPTS} attempts:`, err);
+                logger.error(` ${account.name} failed after ${MAX_RETRY_ATTEMPTS} attempts:`, err);
                 await updateAccountStatus(account.id, ACCOUNT_STATUS.ERROR);
-                await sendLog(`❌ **${account.name}**: Failed - Max retries reached (${err.message})`, 'error');
+
+                await recordTaskAttempt({
+                    jobId,
+                    attemptNo,
+                    status: 'failed',
+                    startedAt: attemptStartedAt,
+                    errorCode: getErrorCode(err),
+                    errorMessage: err.message
+                });
+                await finishTaskJob(jobId, {
+                    status: 'failed',
+                    resultReason: err.message
+                });
+                jobIds.delete(account.id);
+
+                await sendLog(` **${account.name}**: Failed - Max retries reached (${err.message})`, 'error');
 
                 // Still close browser to leave clean state for NEXT account
                 if (sharedBrowser) {
@@ -286,12 +376,13 @@ const processQueueFull = async () => {
             await sharedBrowser.close();
         }
 
-        logger.info('✅ Queue processing complete');
-        await sendLog('✅ **Queue Complete**: All accounts processed', 'success');
+        logger.info(' Queue processing complete');
+        await sendLog(' **Queue Complete**: All accounts processed', 'success');
 
     } catch (err) {
+        queueRunStatus = 'failed';
         logger.error('Queue error:', err);
-        await sendLog(`❌ **Queue Error**: ${err.message}`, 'error');
+        await sendLog(` **Queue Error**: ${err.message}`, 'error');
 
         // Make sure browser is closed on error
         if (sharedBrowser && sharedBrowser.isLaunched()) {
@@ -300,6 +391,7 @@ const processQueueFull = async () => {
             } catch (e) { /* ignore */ }
         }
     } finally {
+        await finishQueueRun(queueRunId, queueRunStatus);
         isRunning = false;
         shouldStop = false;
         updateHealthState({ queueRunning: false, activeAccount: null, brainRunning: false });
@@ -312,7 +404,7 @@ const processQueueFull = async () => {
  * @returns {Promise<void>}
  */
 export const runBatch = async (accounts) => {
-    return processQueueFull();
+    return processQueueFull('manual_batch');
 };
 
 /**
@@ -331,6 +423,8 @@ export const executeSession = async (accountId) => {
     updateHealthState({ queueRunning: true });
     release();
     let browser = null;
+    let jobId = null;
+    let attemptStartedAt = Date.now();
 
     try {
         const account = await getAccountDecrypted(accountId);
@@ -341,21 +435,44 @@ export const executeSession = async (accountId) => {
         logger.info(`Running single account: ${account.name}`);
         updateHealthState({ activeAccount: account.name });
         await updateAccountStatus(account.id, ACCOUNT_STATUS.RUNNING);
+        jobId = await startTaskJob({
+            account: { ...account, status: ACCOUNT_STATUS.RUNNING }
+        });
 
+        attemptStartedAt = Date.now();
         const result = await runSession(account, null);
         browser = result.browser;
 
         if (result.success) {
             await updateAccountStatus(account.id, ACCOUNT_STATUS.DONE, new Date().toISOString());
-            await sendLog(`✅ **${account.name}**: Session completed successfully`, 'success');
+            await recordTaskAttempt({ jobId, attemptNo: 1, status: 'success', startedAt: attemptStartedAt });
+            await finishTaskJob(jobId, { status: 'success' });
+            await sendLog(` **${account.name}**: Session completed successfully`, 'success');
             return { success: true };
         } else {
             await updateAccountStatus(account.id, ACCOUNT_STATUS.ERROR);
-            await sendLog(`❌ **${account.name}**: Failed - ${result.reason}`, 'error');
+            await recordTaskAttempt({
+                jobId,
+                attemptNo: 1,
+                status: 'failed',
+                startedAt: attemptStartedAt,
+                errorMessage: result.reason
+            });
+            await finishTaskJob(jobId, { status: 'failed', resultReason: result.reason });
+            await sendLog(` **${account.name}**: Failed - ${result.reason}`, 'error');
             return { success: false, message: result.reason };
         }
 
     } catch (err) {
+        await recordTaskAttempt({
+            jobId,
+            attemptNo: 1,
+            status: 'failed',
+            startedAt: attemptStartedAt,
+            errorCode: getErrorCode(err),
+            errorMessage: err.message
+        });
+        await finishTaskJob(jobId, { status: 'failed', resultReason: err.message });
         logger.error('Error:', err);
         return { success: false, message: err.message };
     } finally {
@@ -388,6 +505,8 @@ export const executeFountain = async (accountId) => {
     updateHealthState({ queueRunning: true });
     release();
     let browser = null;
+    let jobId = null;
+    let attemptStartedAt = Date.now();
 
     try {
         const account = await getAccountDecrypted(accountId);
@@ -398,22 +517,45 @@ export const executeFountain = async (accountId) => {
         logger.info(`Running fountain for account: ${account.name}`);
         updateHealthState({ activeAccount: account.name });
         await updateAccountStatus(account.id, ACCOUNT_STATUS.RUNNING);
+        jobId = await startTaskJob({
+            account: { ...account, status: ACCOUNT_STATUS.RUNNING }
+        });
 
         // Pass mode: 'fountain' to runSession
+        attemptStartedAt = Date.now();
         const result = await runSession(account, null, 'fountain');
         browser = result.browser;
 
         if (result.success) {
             await updateAccountStatus(account.id, ACCOUNT_STATUS.DONE, new Date().toISOString());
-            await sendLog(`🌊 **${account.name}**: Fountain collected successfully`, 'success');
+            await recordTaskAttempt({ jobId, attemptNo: 1, status: 'success', startedAt: attemptStartedAt });
+            await finishTaskJob(jobId, { status: 'success' });
+            await sendLog(` **${account.name}**: Fountain collected successfully`, 'success');
             return { success: true };
         } else {
             await updateAccountStatus(account.id, ACCOUNT_STATUS.ERROR);
-            await sendLog(`❌ **${account.name}**: Fountain failed - ${result.reason}`, 'error');
+            await recordTaskAttempt({
+                jobId,
+                attemptNo: 1,
+                status: 'failed',
+                startedAt: attemptStartedAt,
+                errorMessage: result.reason
+            });
+            await finishTaskJob(jobId, { status: 'failed', resultReason: result.reason });
+            await sendLog(` **${account.name}**: Fountain failed - ${result.reason}`, 'error');
             return { success: false, message: result.reason };
         }
 
     } catch (err) {
+        await recordTaskAttempt({
+            jobId,
+            attemptNo: 1,
+            status: 'failed',
+            startedAt: attemptStartedAt,
+            errorCode: getErrorCode(err),
+            errorMessage: err.message
+        });
+        await finishTaskJob(jobId, { status: 'failed', resultReason: err.message });
         logger.error('Fountain error:', err);
         return { success: false, message: err.message };
     } finally {
@@ -443,6 +585,8 @@ export const runFountainBatch = async () => {
 
     let completedCount = 0;
     let sharedBrowser = null;
+    let queueRunId = null;
+    let queueRunStatus = 'success';
 
     try {
         const accounts = await getAccounts();
@@ -454,22 +598,31 @@ export const runFountainBatch = async () => {
         }
 
         logger.info(`Starting fountain batch for ${accounts.length} accounts`);
-        await sendLog(`🌊 **Fountain Batch Started**: Processing ${accounts.length} accounts`, 'info');
+        await sendLog(` **Fountain Batch Started**: Processing ${accounts.length} accounts`, 'info');
+        queueRunId = await startQueueRun('fountain_batch');
 
         for (let i = 0; i < accounts.length; i++) {
             if (shouldStop) {
-                logger.warn('🛑 Kill-switch activated - stopping fountain batch');
-                await sendLog('🛑 **Fountain Batch Stopped**: Force stop activated', 'error');
+                logger.warn(' Kill-switch activated - stopping fountain batch');
+                await sendLog(' **Fountain Batch Stopped**: Force stop activated', 'error');
+                queueRunStatus = 'stopped';
                 break;
             }
 
             const account = accounts[i];
             updateHealthState({ activeAccount: account.name });
+            let jobId = null;
+            let attemptStartedAt = Date.now();
             try {
                 logger.info(`\n[${i + 1}/${accounts.length}] Fountain for ${account.name}...`);
                 await updateAccountStatus(account.id, ACCOUNT_STATUS.RUNNING);
+                jobId = await startTaskJob({
+                    queueRunId,
+                    account: { ...account, status: ACCOUNT_STATUS.RUNNING }
+                });
 
                 // Run fountain session with shared browser and mode
+                attemptStartedAt = Date.now();
                 const result = await runSession(await getAccountDecrypted(account.id), sharedBrowser, 'fountain');
 
                 // Update shared browser reference
@@ -478,27 +631,51 @@ export const runFountainBatch = async () => {
                 }
 
                 if (result.success) {
-                    logger.info(`✅ Fountain completed for ${account.name}`);
+                    logger.info(` Fountain completed for ${account.name}`);
                     await updateAccountStatus(account.id, ACCOUNT_STATUS.DONE, new Date().toISOString());
+
+                    await recordTaskAttempt({ jobId, attemptNo: 1, status: 'success', startedAt: attemptStartedAt });
+                    await finishTaskJob(jobId, { status: 'success' });
                     completedCount++;
                 } else {
-                    logger.error(`❌ Fountain failed for ${account.name}: ${result.reason}`);
+                    logger.error(` Fountain failed for ${account.name}: ${result.reason}`);
                     await updateAccountStatus(account.id, ACCOUNT_STATUS.ERROR);
+
+                    await recordTaskAttempt({
+                        jobId,
+                        attemptNo: 1,
+                        status: 'failed',
+                        startedAt: attemptStartedAt,
+                        errorMessage: result.reason
+                    });
+                    await finishTaskJob(jobId, { status: 'failed', resultReason: result.reason });
                 }
 
             } catch (err) {
                 logger.error(`Error processing fountain for ${account.name}:`, err);
                 await updateAccountStatus(account.id, ACCOUNT_STATUS.ERROR);
+
+                await recordTaskAttempt({
+                    jobId,
+                    attemptNo: 1,
+                    status: 'failed',
+                    startedAt: attemptStartedAt,
+                    errorCode: getErrorCode(err),
+                    errorMessage: err.message
+                });
+                await finishTaskJob(jobId, { status: 'failed', resultReason: err.message });
             }
         }
 
-        await sendLog(`✅ **Fountain Batch Complete**: Processed ${completedCount}/${accounts.length} accounts`, 'success');
+        await sendLog(` **Fountain Batch Complete**: Processed ${completedCount}/${accounts.length} accounts`, 'success');
         return { completed: completedCount };
 
     } catch (err) {
+        queueRunStatus = 'failed';
         logger.error('Fountain batch error:', err);
         throw err;
     } finally {
+        await finishQueueRun(queueRunId, queueRunStatus);
         // Close shared browser if created
         if (sharedBrowser && sharedBrowser.isLaunched()) {
             try {

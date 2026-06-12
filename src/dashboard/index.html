@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Evertext Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <header class="flex flex-col gap-3 border-b border-slate-800 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-normal text-white">Evertext Automation Dashboard</h1>
+                <p class="mt-1 text-sm text-slate-400">Read-only execution visibility from PostgreSQL</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+                <span id="statusMessage" class="rounded border border-slate-700 bg-slate-900 px-3 py-1">Loading</span>
+                <span class="rounded border border-slate-700 bg-slate-900 px-3 py-1">Refresh in <span id="countdown">30</span>s</span>
+            </div>
+        </header>
+
+        <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Metrics">
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <p class="text-xs uppercase text-slate-400">Total Jobs</p>
+                <p id="totalJobs" class="mt-2 text-3xl font-semibold">0</p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <p class="text-xs uppercase text-slate-400">Successful</p>
+                <p id="successfulJobs" class="mt-2 text-3xl font-semibold text-emerald-300">0</p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <p class="text-xs uppercase text-slate-400">Failed</p>
+                <p id="failedJobs" class="mt-2 text-3xl font-semibold text-rose-300">0</p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <p class="text-xs uppercase text-slate-400">Avg Runtime</p>
+                <p id="averageRuntime" class="mt-2 text-3xl font-semibold">0.0s</p>
+            </div>
+            <div class="rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <p class="text-xs uppercase text-slate-400">Success Rate</p>
+                <p id="successRate" class="mt-2 text-3xl font-semibold">0%</p>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-slate-800 bg-slate-900 p-4" aria-label="Account status summary">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold text-white">Account Status</h2>
+                <span id="accountTotal" class="text-sm text-slate-400">0 accounts</span>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded border border-slate-700 bg-slate-950 p-3">
+                    <p class="text-sm text-slate-400">Pending</p>
+                    <p id="pendingAccounts" class="mt-1 text-2xl font-semibold text-sky-300">0</p>
+                </div>
+                <div class="rounded border border-slate-700 bg-slate-950 p-3">
+                    <p class="text-sm text-slate-400">Running</p>
+                    <p id="runningAccounts" class="mt-1 text-2xl font-semibold text-amber-300">0</p>
+                </div>
+                <div class="rounded border border-slate-700 bg-slate-950 p-3">
+                    <p class="text-sm text-slate-400">Done</p>
+                    <p id="doneAccounts" class="mt-1 text-2xl font-semibold text-emerald-300">0</p>
+                </div>
+                <div class="rounded border border-slate-700 bg-slate-950 p-3">
+                    <p class="text-sm text-slate-400">Error</p>
+                    <p id="errorAccounts" class="mt-1 text-2xl font-semibold text-rose-300">0</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-slate-800 bg-slate-900 p-4" aria-label="Recent jobs">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold text-white">Recent Jobs</h2>
+                <span class="text-sm text-slate-400">Last 50</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[720px] border-collapse text-left text-sm">
+                    <thead class="border-b border-slate-800 text-xs uppercase text-slate-400">
+                        <tr>
+                            <th class="py-3 pr-4 font-medium">Account</th>
+                            <th class="py-3 pr-4 font-medium">Status</th>
+                            <th class="py-3 pr-4 font-medium">Started</th>
+                            <th class="py-3 pr-4 font-medium">Duration</th>
+                            <th class="py-3 font-medium">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobsBody" class="divide-y divide-slate-800"></tbody>
+                </table>
+                <p id="jobsEmpty" class="hidden py-8 text-center text-sm text-slate-400">No jobs recorded yet</p>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-slate-800 bg-slate-900 p-4" aria-label="Top retried accounts">
+            <h2 class="mb-4 text-lg font-semibold text-white">Top Retried Accounts</h2>
+            <div id="retriesList" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+            <p id="retriesEmpty" class="hidden py-8 text-center text-sm text-slate-400">No retries recorded yet</p>
+        </section>
+
+        <footer class="flex flex-col gap-2 border-t border-slate-800 pt-4 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+            <span>Last updated: <span id="lastUpdated">Never</span></span>
+            <span>Auto-refresh every 30 seconds</span>
+        </footer>
+    </main>
+
+    <script>
+        const REFRESH_SECONDS = 30;
+        let countdown = REFRESH_SECONDS;
+        let refreshTimer = null;
+
+        const elements = {
+            statusMessage: document.getElementById('statusMessage'),
+            countdown: document.getElementById('countdown'),
+            totalJobs: document.getElementById('totalJobs'),
+            successfulJobs: document.getElementById('successfulJobs'),
+            failedJobs: document.getElementById('failedJobs'),
+            averageRuntime: document.getElementById('averageRuntime'),
+            successRate: document.getElementById('successRate'),
+            accountTotal: document.getElementById('accountTotal'),
+            pendingAccounts: document.getElementById('pendingAccounts'),
+            runningAccounts: document.getElementById('runningAccounts'),
+            doneAccounts: document.getElementById('doneAccounts'),
+            errorAccounts: document.getElementById('errorAccounts'),
+            jobsBody: document.getElementById('jobsBody'),
+            jobsEmpty: document.getElementById('jobsEmpty'),
+            retriesList: document.getElementById('retriesList'),
+            retriesEmpty: document.getElementById('retriesEmpty'),
+            lastUpdated: document.getElementById('lastUpdated')
+        };
+
+        function formatNumber(value) {
+            return Number(value || 0).toLocaleString();
+        }
+
+        function formatRuntime(milliseconds) {
+            if (milliseconds === null || milliseconds === undefined) return '0.0s';
+            return `${(Number(milliseconds) / 1000).toFixed(1)}s`;
+        }
+
+        function formatDate(value) {
+            if (!value) return '-';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '-';
+            return date.toLocaleString();
+        }
+
+        function getSuccessRate(metrics) {
+            const total = Number(metrics.totalJobsRun || 0);
+            if (total === 0) return '0%';
+            return `${Math.round((Number(metrics.successfulJobs || 0) / total) * 100)}%`;
+        }
+
+        function getStatusBadge(status) {
+            const normalized = String(status || 'other').toLowerCase();
+            const classes = {
+                success: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+                done: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+                failed: 'bg-rose-500/15 text-rose-200 border-rose-500/30',
+                error: 'bg-rose-500/15 text-rose-200 border-rose-500/30',
+                running: 'bg-amber-500/15 text-amber-200 border-amber-500/30'
+            };
+            const className = classes[normalized] || 'bg-slate-700/40 text-slate-200 border-slate-600';
+            return `<span class="inline-flex rounded-full border px-2 py-1 text-xs font-medium ${className}">${normalized}</span>`;
+        }
+
+        function renderMetrics(metrics) {
+            elements.totalJobs.textContent = formatNumber(metrics.totalJobsRun);
+            elements.successfulJobs.textContent = formatNumber(metrics.successfulJobs);
+            elements.failedJobs.textContent = formatNumber(metrics.failedJobs);
+            elements.averageRuntime.textContent = formatRuntime(metrics.averageRuntimeMs);
+            elements.successRate.textContent = getSuccessRate(metrics);
+        }
+
+        function renderAccounts(summary) {
+            const byStatus = summary.byStatus || {};
+            elements.accountTotal.textContent = `${formatNumber(summary.total)} accounts`;
+            elements.pendingAccounts.textContent = formatNumber(byStatus.pending);
+            elements.runningAccounts.textContent = formatNumber(byStatus.running);
+            elements.doneAccounts.textContent = formatNumber(byStatus.done);
+            elements.errorAccounts.textContent = formatNumber(byStatus.error);
+        }
+
+        function renderJobs(jobs) {
+            elements.jobsBody.innerHTML = '';
+            elements.jobsEmpty.classList.toggle('hidden', jobs.length > 0);
+
+            for (const job of jobs) {
+                const row = document.createElement('tr');
+                row.className = 'align-top';
+                row.innerHTML = `
+                    <td class="py-3 pr-4 text-slate-100">${job.accountLabel || 'Unknown'}</td>
+                    <td class="py-3 pr-4">${getStatusBadge(job.status)}</td>
+                    <td class="py-3 pr-4 text-slate-300">${formatDate(job.startedAt)}</td>
+                    <td class="py-3 pr-4 text-slate-300">${formatRuntime(job.durationMs)}</td>
+                    <td class="py-3 text-slate-300">${job.resultReason || '-'}</td>
+                `;
+                elements.jobsBody.appendChild(row);
+            }
+        }
+
+        function renderRetries(accounts) {
+            elements.retriesList.innerHTML = '';
+            elements.retriesEmpty.classList.toggle('hidden', accounts.length > 0);
+
+            for (const account of accounts) {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-950 p-3';
+                item.innerHTML = `
+                    <span class="truncate text-sm text-slate-100">${account.label || account.legacy_id || 'Unknown'}</span>
+                    <span class="rounded bg-amber-500/15 px-2 py-1 text-sm font-semibold text-amber-200">${formatNumber(account.retry_count)}</span>
+                `;
+                elements.retriesList.appendChild(item);
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                elements.statusMessage.textContent = 'Refreshing';
+                const response = await fetch('/dashboard/data', { cache: 'no-store' });
+                if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+
+                const data = await response.json();
+                renderMetrics(data.metrics || {});
+                renderAccounts(data.accountsSummary || { total: 0, byStatus: {} });
+                renderJobs(data.recentJobs || []);
+                renderRetries(data.topRetriedAccounts || []);
+
+                elements.lastUpdated.textContent = new Date().toLocaleString();
+                elements.statusMessage.textContent = 'Live';
+                countdown = REFRESH_SECONDS;
+            } catch (error) {
+                elements.statusMessage.textContent = 'Unavailable';
+                console.error(error);
+            }
+        }
+
+        function startCountdown() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(() => {
+                countdown -= 1;
+                if (countdown <= 0) {
+                    countdown = REFRESH_SECONDS;
+                    loadDashboard();
+                }
+                elements.countdown.textContent = String(countdown);
+            }, 1000);
+        }
+
+        loadDashboard();
+        startCountdown();
+    </script>
+</body>
+</html>

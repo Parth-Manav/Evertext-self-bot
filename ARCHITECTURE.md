@@ -20,7 +20,7 @@ Deep technical reference for the Evertext Automation Framework.
 
 ### 3. WebSocket Client (`src/websocket-client.js`)
 
-- Connects to `wss://…/socket.io/?EIO=4&transport=websocket`
+- Connects to `wss:///socket.io/?EIO=4&transport=websocket`
 - Completes Engine.IO handshake and namespace upgrade
 - Emits `output` (terminal text), `user_count`, handles `idle_timeout` and `connection_failed`
 - Sends commands via `42["input",{"input":"..."}]` packets
@@ -33,7 +33,7 @@ Deep technical reference for the Evertext Automation Framework.
 
 ---
 
-## Request Lifecycle (Discord → Rust Action)
+## Request Lifecycle (Discord - Rust Action)
 
 ```
 User: /force_run_all
@@ -75,7 +75,7 @@ manager ──► getAccountDecrypted() ──► runner.runSession(account, sha
   "type": "terminal_output",
   "content": "Enter Restore code",
   "account": {
-    "code": "…",
+    "code": "",
     "targetServer": "E-15",
     "server_toggle": true
   }
@@ -133,7 +133,7 @@ stateDiagram-v2
 
 ## Concurrency Model
 
-- **Queue:** Sequential — one session runs at a time via `processQueueFull`
+- **Queue:** Sequential - one session runs at a time via `processQueueFull`
 - **Lock:** `AsyncLock` prevents overlapping `processQueueFull` invocations
 - **Browser:** Single shared `BrowserController` reused across sessions in a batch; incognito context per session
 - **Brain:** One Rust child process per `runSession`; stopped after each session
@@ -145,7 +145,7 @@ Simultaneous multi-session execution is intentionally **not** supported to avoid
 
 ## Known Limitations
 
-- Sequential queue only — no parallel sessions
+- Sequential queue only - no parallel sessions
 - Target URL and WebSocket endpoint are configured with `GAME_URL` and `WS_BASE_URL`
 - Rust brain path must exist at `evertext_brain/target/release/evertext_brain[.exe]`
 - Discord log delivery is best-effort (3 retries)

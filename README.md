@@ -90,6 +90,7 @@ LOG_CHANNEL_ID=your_channel_id_here
 LOG_LEVEL=INFO
 PORT=3000
 ENCRYPTION_KEY=replace_with_a_random_secret
+DATABASE_URL=postgres://evertext:evertext@localhost:5432/evertext
 ```
 
 `GAME_URL` is used for browser navigation, cookie scoping, and WebSocket origin/host headers. `WS_BASE_URL` is used for the Engine.IO WebSocket connection.
@@ -114,6 +115,26 @@ Start the application:
 ```bash
 npm start
 ```
+
+Optional PostgreSQL Phase 1 persistence:
+
+```bash
+docker compose up -d postgres
+```
+
+Add the local connection string to `.env`:
+
+```env
+DATABASE_URL=postgres://evertext:evertext@localhost:5432/evertext
+```
+
+Import existing `db.json` accounts into PostgreSQL:
+
+```bash
+npm run db:import
+```
+
+If `DATABASE_URL` is not set, the app continues using `db.json` only.
 
 On first run, the setup script can help create a local `.env` file.
 
@@ -166,6 +187,16 @@ The app exposes:
 - `GET /ping`
 
 The response includes process uptime, memory usage, last activity time, queue status, active account label, and whether the Rust brain is currently running. It does not expose cookies, restore codes, or other credentials.
+
+## Dashboard
+
+When PostgreSQL is configured and running, open the read-only dashboard:
+
+```text
+http://localhost:3000/dashboard
+```
+
+If you changed `PORT`, use that port instead. The dashboard reads PostgreSQL metrics and job history through the health server endpoints; it does not write to PostgreSQL or `db.json`.
 
 ## Responsible Use
 

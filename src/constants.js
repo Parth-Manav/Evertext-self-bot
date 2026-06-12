@@ -14,7 +14,7 @@ export const INTER_ACCOUNT_DELAY_MS = 10_000;
 /** @constant {number} Delay to defer a session when encountering rate-limit errors (10 minutes) */
 export const ZIGZA_DEFER_DELAY_MS = 10 * 60 * 1000;
 
-/** @constant {number} Wait time after defer before retry (10 minutes) — alias of defer delay */
+/** @constant {number} Wait time after defer before retry (10 minutes)  alias of defer delay */
 export const DEFER_WAIT_TIME_MS = ZIGZA_DEFER_DELAY_MS;
 
 /** @constant {number} Terminal idle timeout (90 seconds) */

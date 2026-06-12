@@ -13,12 +13,12 @@ export async function runSetup() {
     if (existsSync(ENV_PATH)) {
         const content = await fs.readFile(ENV_PATH, 'utf-8');
         if (content.includes('DISCORD_TOKEN=')) {
-            console.log('✅ Configuration found. Starting bot...');
+            console.log(' Configuration found. Starting bot...');
             return;
         }
     }
 
-    console.log('\n🔵 --- FIRST TIME SETUP --- 🔵');
+    console.log('\n --- FIRST TIME SETUP --- ');
     console.log('We need to configure a few things before starting.\n');
 
     const rl = readline.createInterface({
@@ -29,7 +29,7 @@ export async function runSetup() {
     try {
         const token = await askQuestion(rl, '1. Enter your DISCORD_TOKEN (MANDATORY): ');
         if (!token.trim()) {
-            console.error('❌ Error: DISCORD_TOKEN is required! The bot cannot run without it.');
+            console.error(' Error: DISCORD_TOKEN is required! The bot cannot run without it.');
             process.exit(1);
         }
 
@@ -42,7 +42,7 @@ export async function runSetup() {
         if (encryptionKey.trim()) {
             envContent += `ENCRYPTION_KEY=${encryptionKey.trim()}\n`;
         } else {
-            console.log('ℹ️ No encryption key provided. Security will be minimal.');
+            console.log(' No encryption key provided. Security will be minimal.');
         }
 
         if (logChannelId.trim()) {
@@ -51,7 +51,7 @@ export async function runSetup() {
 
         // Write to .env
         await fs.writeFile(ENV_PATH, envContent);
-        console.log('\n✅ Configuration saved to .env file!');
+        console.log('\n Configuration saved to .env file!');
 
     } catch (err) {
         console.error('Setup failed:', err);

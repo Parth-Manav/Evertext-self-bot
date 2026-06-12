@@ -67,7 +67,7 @@ export const runSession = async (account, sharedBrowser = null) => {
 
     try {
         logger.info('\n' + '='.repeat(60));
-        logger.info(`🤖 Starting HYBRID session for "${account.name}"`);
+        logger.info(` Starting HYBRID session for "${account.name}"`);
         logger.info('='.repeat(60));
 
         // Get session cookie
@@ -86,7 +86,7 @@ export const runSession = async (account, sharedBrowser = null) => {
         logger.info('Initializing Rust brain...');
         brain = new RustBrain();
         await brain.start();
-        logger.info('🧠 Rust brain initialized');
+        logger.info(' Rust brain initialized');
 
         // 3. Launch/Check Browser
         if (!browser) {
@@ -151,7 +151,7 @@ export const runSession = async (account, sharedBrowser = null) => {
                     );
                     const remainingTime = Math.floor((CONNECT_TIMEOUT - (Date.now() - startConnect)) / 1000);
                     logger.warn(`Connection rejected (Terminal Full). Retry ${retryCount}/${MAX_RETRIES} in ${backoffDelay / 1000}s (${remainingTime}s remaining)`);
-                    await sendLog(`⏸️ **${account.name}**: Terminal full - Retry ${retryCount}/${MAX_RETRIES} in ${backoffDelay / 1000}s`, 'warning');
+                    await sendLog(` **${account.name}**: Terminal full - Retry ${retryCount}/${MAX_RETRIES} in ${backoffDelay / 1000}s`, 'warning');
                     await new Promise(r => setTimeout(r, backoffDelay));
                 } else {
                     // Start retry logic for other connection errors too, but logging differently
@@ -169,7 +169,7 @@ export const runSession = async (account, sharedBrowser = null) => {
         // 5. Check if terminal is full BEFORE clicking Start
         if (currentUsers >= maxUsers) {
             logger.warn(`Terminal is FULL (${currentUsers}/${maxUsers}). Waiting for slot...`);
-            await sendLog(`⏸️ **${account.name}**: Terminal full - waiting for slot`, 'warning');
+            await sendLog(` **${account.name}**: Terminal full - waiting for slot`, 'warning');
 
             // Wait for a slot to open (event-driven)
             let checkInterval = null; // Track interval for cleanup
@@ -179,12 +179,12 @@ export const runSession = async (account, sharedBrowser = null) => {
 
                 checkInterval = setInterval(() => {
                     if (currentUsers < maxUsers) {
-                        logger.info(`✅ Slot opened! (${currentUsers}/${maxUsers})`);
+                        logger.info(` Slot opened! (${currentUsers}/${maxUsers})`);
                         clearInterval(checkInterval);
                         checkInterval = null;
                         resolve(true);
                     } else if (Date.now() - startWait > MAX_WAIT_TIME) {
-                        logger.warn(`⏱️ Max wait time (10 min) reached. Deferring...`);
+                        logger.warn(` Max wait time (10 min) reached. Deferring...`);
                         clearInterval(checkInterval);
                         checkInterval = null;
                         resolve(false);
@@ -205,7 +205,7 @@ export const runSession = async (account, sharedBrowser = null) => {
             });
 
             if (!slotOpened) {
-                await sendLog(`⏭️ **${account.name}**: Terminal full after 10 min - deferring`, 'info');
+                await sendLog(` **${account.name}**: Terminal full after 10 min - deferring`, 'info');
                 if (wsClient) wsClient.close();
                 if (brain) brain.stop();
                 return {
@@ -218,14 +218,14 @@ export const runSession = async (account, sharedBrowser = null) => {
                 };
             }
 
-            await sendLog(`✅ **${account.name}**: Slot opened - proceeding!`, 'success');
+            await sendLog(` **${account.name}**: Slot opened - proceeding!`, 'success');
         }
 
         // 6. Click Start Button (Puppeteer) - Start terminal only when ready
         logger.info('Starting terminal via browser...');
         await browser.clickStart();
 
-        logger.info('✅ Hybrid setup complete (Brain -> WebSocket -> Browser Start)\n');
+        logger.info(' Hybrid setup complete (Brain -> WebSocket -> Browser Start)\n');
 
         // Wait for initial terminal output to arrive via WebSocket
         logger.info('Waiting for initial terminal data...');
@@ -239,7 +239,7 @@ export const runSession = async (account, sharedBrowser = null) => {
 
             // --- RECONNECTION FIX FOR EMPTY BUFFER ---
             if (terminalBuffer.length === 0) {
-                logger.info('🔄 Buffer STILL empty. Connection stale. Reconnecting WebSocket...');
+                logger.info(' Buffer STILL empty. Connection stale. Reconnecting WebSocket...');
 
                 if (wsClient) {
                     try { wsClient.close(); } catch (e) { }
@@ -251,7 +251,7 @@ export const runSession = async (account, sharedBrowser = null) => {
                 wsClient.on('output', (terminalOutput) => {
                     terminalBuffer += terminalOutput;
                     if (terminalBuffer.length < WS_VERBOSE_OUTPUT_THRESHOLD) {
-                        logger.info(`[WebSocket] 📥 Re-connected data: ${terminalOutput.length} chars`);
+                        logger.info(`[WebSocket]  Re-connected data: ${terminalOutput.length} chars`);
                     }
                 });
 
@@ -275,7 +275,7 @@ export const runSession = async (account, sharedBrowser = null) => {
             }
             // -----------------------------------------
         } else {
-            logger.info(`✅ Received ${terminalBuffer.length} chars of initial data`);
+            logger.info(` Received ${terminalBuffer.length} chars of initial data`);
             logger.debug(`First ${TERMINAL_PREVIEW_CHARS} chars: ${terminalBuffer.substring(0, TERMINAL_PREVIEW_CHARS)}`);
         }
 
@@ -286,12 +286,12 @@ export const runSession = async (account, sharedBrowser = null) => {
         let lastProcessedLength = 0;
         let lastDataTime = Date.now();
 
-        logger.info('🧠 Entering brain-controlled loop...\n');
+        logger.info(' Entering brain-controlled loop...\n');
 
         while (Date.now() - startTime < MAX_SESSION_TIME) {
             // Check Idle Timeout
             if (Date.now() - lastDataTime > IDLE_TIMEOUT_MS) {
-                logger.error(`⏱️ Idle timeout (${IDLE_TIMEOUT_MS}ms) - No new data.`);
+                logger.error(` Idle timeout (${IDLE_TIMEOUT_MS}ms) - No new data.`);
                 throw new IdleTimeoutError();
             }
 
@@ -314,13 +314,13 @@ export const runSession = async (account, sharedBrowser = null) => {
 
             if (cleanText.includes(TERMINAL_MSG_WHICH_ACC_LOGIN)) {
                 // Server selection: inject history so brain can find the server index.
-                logger.info('🛠️ Server-selection prompt detected. Injecting history...');
+                logger.info(' Server-selection prompt detected. Injecting history...');
                 const startIdx = Math.max(0, fullClean.length - config.SERVER_LIST_CONTEXT_CHARS);
                 cleanText = fullClean.slice(startIdx);
                 logger.info(`Target server: ${account.targetServer}`);
             } else if (cleanText.includes(TERMINAL_MSG_SELECT_EVENT)) {
                 // Event selection: inject history so brain can parse the full event list.
-                logger.info('🗂️ Event-selection prompt detected. Injecting history...');
+                logger.info(' Event-selection prompt detected. Injecting history...');
                 const startIdx = Math.max(0, fullClean.length - EVENT_LIST_CONTEXT_CHARS);
                 cleanText = fullClean.slice(startIdx);
                 logger.debug('Event list context provided to brain.');
@@ -339,10 +339,10 @@ export const runSession = async (account, sharedBrowser = null) => {
 
             // Execute brain command (maps to Rust BotState transitions)
             if (brainResponse.action === 'send_text') {
-                logger.info(`➡️ Sending: "${brainResponse.payload}"${brainResponse.context ? ` [ctx: ${brainResponse.context}]` : ''}`);
+                logger.info(` Sending: "${brainResponse.payload}"${brainResponse.context ? ` [ctx: ${brainResponse.context}]` : ''}`);
                 await wsClient.sendCommand(brainResponse.payload);
 
-                // ── Contextual Discord logging ──────────────────────────────
+                //  Contextual Discord logging 
                 if (brainResponse.context === 'server_selection') {
                     // Parse terminal to extract rich server info for the log
                     const lines = terminalBuffer.split('\n');
@@ -361,12 +361,12 @@ export const runSession = async (account, sharedBrowser = null) => {
                     }
                     if (serverInfo) {
                         await sendLog(
-                            `🚀 **${account.name}** starting\n` +
-                            `📍 Server: ${serverInfo.server} || Account: ${serverInfo.accountName} || Guild: ${serverInfo.guild}`,
+                            ` **${account.name}** starting\n` +
+                            ` Server: ${serverInfo.server} || Account: ${serverInfo.accountName} || Guild: ${serverInfo.guild}`,
                             'info'
                         );
                     } else {
-                        await sendLog(`🚀 **${account.name}**: Starting (Server index: ${brainResponse.payload})`, 'info');
+                        await sendLog(` **${account.name}**: Starting (Server index: ${brainResponse.payload})`, 'info');
                     }
 
                 } else if (brainResponse.context === 'event_selection') {
@@ -383,11 +383,11 @@ export const runSession = async (account, sharedBrowser = null) => {
                     }
                     if (chosenEvent) {
                         await sendLog(
-                            `🗂️ **${account.name}**: Selected event **${chosenEvent.name}** (Expires: ${chosenEvent.expires})`,
+                            ` **${account.name}**: Selected event **${chosenEvent.name}** (Expires: ${chosenEvent.expires})`,
                             'info'
                         );
                     } else {
-                        await sendLog(`🗂️ **${account.name}**: Selected event index **${brainResponse.payload}**`, 'info');
+                        await sendLog(` **${account.name}**: Selected event index **${brainResponse.payload}**`, 'info');
                     }
                 }
 
@@ -465,13 +465,13 @@ export const runSession = async (account, sharedBrowser = null) => {
                 };
 
             } else if (brainResponse.action === 'wait') {
-                // Brain is waiting for more terminal output — continue polling loop
+                // Brain is waiting for more terminal output  continue polling loop
                 await new Promise(r => setTimeout(r, BRAIN_WAIT_LOOP_MS));
             }
         }
 
         // Timeout
-        logger.warn('⚠️ Session timed out (15 minutes)');
+        logger.warn(' Session timed out (15 minutes)');
         if (browser && browser.isLaunched()) await browser.clickStop();
         if (wsClient) wsClient.close();
         if (brain) brain.stop();
@@ -479,8 +479,8 @@ export const runSession = async (account, sharedBrowser = null) => {
         return { success: false, reason: 'Session timeout', browser, createdBrowser };
 
     } catch (error) {
-        logger.error('\n❌ ERROR OCCURRED');
-        logger.error('💥 Error:', error.message);
+        logger.error('\n ERROR OCCURRED');
+        logger.error(' Error:', error.message);
         logger.info('='.repeat(60) + '\n');
 
         // Clean up carefully

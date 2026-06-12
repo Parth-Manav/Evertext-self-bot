@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "node --test",
+    "db:import": "node scripts/import-accounts-to-postgres.js",
     "build": "npx caxa --input . --output bot.exe --exclude bot.exe .git .env db.json db.json.backup logs bin dist node_modules/.bin -- \"{{caxa}}/node.exe\" \"{{caxa}}/index.js\""
   },
   "keywords": [],
@@ -17,6 +18,7 @@
     "dotenv": "^17.2.3",
     "lowdb": "^7.0.1",
     "node-cron": "^4.2.1",
+    "pg": "^8.21.0",
     "puppeteer": "^24.31.0",
     "ws": "^8.18.3"
   }

@@ -1,4 +1,4 @@
-//! # Evertext Brain — Stateful Decision Engine
+//! # Evertext Brain  Stateful Decision Engine
 //!
 //! Communicates with the Node.js host via JSON over stdin/stdout.
 //!
@@ -32,9 +32,9 @@
 use serde::{Deserialize, Serialize};
 use std::io::{self, BufRead, Write};
 
-// ─────────────────────────────────────────────
+// 
 //  Terminal String Match Constants
-// ─────────────────────────────────────────────
+// 
 
 /// Terminal output when an invalid command is sent and the script terminates.
 const MSG_INVALID_COMMAND: &str = "Invalid Command";
@@ -74,9 +74,9 @@ fn default_true() -> bool {
     true
 }
 
-// ─────────────────────────────────────────────
+// 
 //  I/O Message Types
-// ─────────────────────────────────────────────
+// 
 
 /// Represents an incoming JSON message from the Node.js parent.
 #[derive(Debug, Deserialize)]
@@ -157,9 +157,9 @@ pub enum OutputCommand {
     },
 }
 
-// ─────────────────────────────────────────────
+// 
 //  State Machine States
-// ─────────────────────────────────────────────
+// 
 
 /// Represents the current phase of the automation workflow.
 #[derive(Debug, Clone, PartialEq)]
@@ -192,13 +192,13 @@ pub enum BotState {
     /// **Waits For**: The parent process to tear down the session.
     Finished,
 
-    // ── ISOLATED (not reachable by the active state machine) ──────────────
+    //  ISOLATED (not reachable by the active state machine) 
     // Kept for reference / future use. No transition leads here.
 }
 
-// ─────────────────────────────────────────────
+// 
 //  Session
-// ─────────────────────────────────────────────
+// 
 
 /// Maintains the state and history for a single execution sequence.
 pub struct BotSession {
@@ -227,7 +227,7 @@ impl BotSession {
         self.account = None;
     }
 
-    // ── Main dispatch ────────────────────────────────────────────────────
+    //  Main dispatch 
 
     /// Processes new terminal output, updates state, and returns the next command.
     ///
@@ -240,7 +240,7 @@ impl BotSession {
             self.account = Some(account.clone());
         }
 
-        // Append to rolling history (capped at 15 000 chars → trimmed to 10 000)
+        // Append to rolling history (capped at 15 000 chars  trimmed to 10 000)
         self.history.push_str(content);
         if self.history.len() > 15_000 {
             let drain_to = self.history.len() - 10_000;
@@ -253,7 +253,7 @@ impl BotSession {
             }
         }
 
-        // ── Priority error checks (run in every state) ───────────────────
+        //  Priority error checks (run in every state) 
         if content.contains(MSG_INVALID_COMMAND) && content.contains(MSG_EXITING_NOW) {
             return OutputCommand::RestartTerminal {
                 reason: "Invalid Command error".to_string(),
@@ -270,10 +270,10 @@ impl BotSession {
             };
         }
 
-        // ── State machine ────────────────────────────────────────────────
+        //  State machine 
         match &self.state.clone() {
 
-            // ── Step 1: Send "d" to reach the restore-code prompt ─────────
+            //  Step 1: Send "d" to reach the restore-code prompt 
             BotState::Initial => {
                 if content.contains(MSG_ENTER_COMMAND_TO_USE) {
                     self.state = BotState::WaitingForCodePrompt;
@@ -286,7 +286,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 2: Send restore code ─────────────────────────────────
+            //  Step 2: Send restore code 
             BotState::WaitingForCodePrompt => {
                 if content.contains(MSG_ENTER_RESTORE_CODE) {
                     if account.server_toggle {
@@ -303,7 +303,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 3 (optional): Send server index ──────────────────────
+            //  Step 3 (optional): Send server index 
             BotState::WaitingForServerList => {
                 if content.contains(MSG_WHICH_ACC_LOGIN) {
                     self.state = BotState::WaitingForManaPrompt;
@@ -325,7 +325,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 4: Confirm mana spend ────────────────────────────────
+            //  Step 4: Confirm mana spend 
             BotState::WaitingForManaPrompt => {
                 if content.contains(MSG_PRESS_Y_EVENT) {
                     self.state = BotState::WaitingForFirstChoice;
@@ -338,7 +338,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 5: First [a/b/c/d] choice → send "a" ────────────────
+            //  Step 5: First [a/b/c/d] choice  send "a" 
             BotState::WaitingForFirstChoice => {
                 if content.contains(MSG_ENTER_CHOICE) {
                     self.state = BotState::WaitingForEventList;
@@ -351,7 +351,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 6: Parse event list, pick soonest-expiring ───────────
+            //  Step 6: Parse event list, pick soonest-expiring 
             BotState::WaitingForEventList => {
                 if content.contains(MSG_SELECT_EVENT) {
                     self.state = BotState::WaitingForCommand;
@@ -372,7 +372,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 7: Inside event → send "auto" ───────────────────────
+            //  Step 7: Inside event  send "auto" 
             BotState::WaitingForCommand => {
                 if content.contains(MSG_ENTER_COMMAND) {
                     self.state = BotState::WaitingForSecondChoice;
@@ -385,7 +385,7 @@ impl BotSession {
                 }
             }
 
-            // ── Step 8: Second [a/b/c/d] choice → send "d" (exit) ────────
+            //  Step 8: Second [a/b/c/d] choice  send "d" (exit) 
             BotState::WaitingForSecondChoice => {
                 if content.contains(MSG_ENTER_CHOICE) {
                     self.state = BotState::Finished;
@@ -404,7 +404,7 @@ impl BotSession {
                 }
             }
 
-            // ── Final: close the terminal ─────────────────────────────────
+            //  Final: close the terminal 
             BotState::Finished => {
                 if content.contains(MSG_PROCESS_ENDED) {
                     OutputCommand::CloseTerminal {
@@ -415,11 +415,11 @@ impl BotSession {
                 }
             }
 
-            // ── ISOLATED legacy mana-refill flow (never reached) ─────────
+            //  ISOLATED legacy mana-refill flow (never reached) 
         }
     }
 
-    // ── Helper: pick the event index with the soonest expiry ─────────────
+    //  Helper: pick the event index with the soonest expiry 
 
     /// Parses the history to find the active game events and picks the one expiring soonest.
     ///
@@ -488,11 +488,11 @@ impl BotSession {
                     total_hours
                 }
             } else {
-                u64::MAX // no Expires field found → last priority
+                u64::MAX // no Expires field found  last priority
             };
 
             eprintln!(
-                "[Rust Brain] Event {} → {} total hours until expiry",
+                "[Rust Brain] Event {}  {} total hours until expiry",
                 index, expires_hours
             );
 
@@ -505,7 +505,7 @@ impl BotSession {
         best_index
     }
 
-    // ── Helper: find a server's menu index from the listing ──────────────
+    //  Helper: find a server's menu index from the listing 
 
     /// Parses the server selection listing to find the correct index for a target server.
     pub fn find_server_index(&self, content: &str, target_server: &str) -> Option<usize> {
@@ -566,9 +566,9 @@ impl BotSession {
     }
 }
 
-// ─────────────────────────────────────────────
+// 
 //  Entry point
-// ─────────────────────────────────────────────
+// 
 
 #[cfg(test)]
 mod tests {

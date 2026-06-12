@@ -59,7 +59,7 @@ Read one JSON line per response from stdout.
 ### Node.js
 
 - ES modules (`import` / `export`); `type: "module"` in `package.json`
-- **Do not** use `console.log` in `src/` — use `createLogger('module')` from `src/logger.js`
+- **Do not** use `console.log` in `src/` - use `createLogger('module')` from `src/logger.js`
 - Use typed errors from `src/errors.js` at boundaries
 - Magic numbers belong in `src/constants.js` (re-exported via `src/config.js` for legacy imports)
 - JSDoc on all exported functions and classes
@@ -76,7 +76,7 @@ Read one JSON line per response from stdout.
 2. Handle the command in the `interactionCreate` listener
 3. Add to `sensitiveCommands` if admin-only
 4. Use `ValidationError` for invalid user input
-5. Delegate long work to `manager.js` — reply immediately, `followUp` when done
+5. Delegate long work to `manager.js` - reply immediately, `followUp` when done
 
 Example pattern:
 
@@ -94,7 +94,7 @@ else if (commandName === 'my_command') {
 1. Branch from `main`: `git checkout -b feature/your-feature`
 2. Ensure `cargo build --release` succeeds with no warnings you introduced
 3. Verify `npm start` launches without syntax errors
-4. Describe behavioral impact — especially any IPC message changes (discouraged)
+4. Describe behavioral impact - especially any IPC message changes (discouraged)
 
 ## Testing Checklist
 

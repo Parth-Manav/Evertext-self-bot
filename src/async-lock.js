@@ -4,7 +4,7 @@
  */
 
 /**
- * FIFO async lock — only one caller holds the lock at a time.
+ * FIFO async lock  only one caller holds the lock at a time.
  */
 export class AsyncLock {
     constructor() {
@@ -16,7 +16,7 @@ export class AsyncLock {
 
     /**
      * Acquires the lock. Resolves with a `release` function when the lock is held.
-     * @returns {Promise<() => void>} Release callback — must be invoked when done.
+     * @returns {Promise<() => void>} Release callback  must be invoked when done.
      */
     async acquire() {
         return new Promise((resolve) => {
