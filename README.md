@@ -8,7 +8,7 @@ The project is designed to demonstrate automation engineering, process orchestra
 
 GitHub attachment:
 
-[Evertext automation demo](https://github.com/user-attachments/assets/9e6ae87b-62be-4f77-826a-9ac8bb99c513)
+https://github.com/user-attachments/assets/712fc37d-7844-4edf-85c0-cc098102163e
 
 ## Overview
 
@@ -201,6 +201,7 @@ If you changed `PORT`, use that port instead. The dashboard reads PostgreSQL met
 ## Responsible Use
 
 This project is intended for authorized automation, controlled testing, and engineering education. Do not use it against services where automation is prohibited or where you do not have permission. Keep credentials and local databases out of version control, respect rate limits, and prefer explicit approval from service owners before automating a target.
+Thank You
 
 ## Limitations
 
