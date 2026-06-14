@@ -9,7 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createLogger } from './logger.js';
 import { getMetricsSummary } from './storage/metrics.js';
-import { getRecentJobs, getStoredAccounts } from './storage/postgres.js';
+import { getRecentJobs, getStoredAccounts, isPostgresEnabled } from './storage/postgres.js';
 
 const logger = createLogger('health');
 const __filename = fileURLToPath(import.meta.url);
@@ -106,6 +106,15 @@ export function startHealthServer(port = 3000) {
         };
 
         try {
+            const apiKey = process.env.DASHBOARD_API_KEY?.trim();
+            const protectedPaths = ['/accounts', '/jobs', '/metrics', '/dashboard', '/dashboard/data'];
+            if (apiKey && protectedPaths.includes(url.pathname)) {
+                const clientKey = req.headers['x-api-key'];
+                if (!clientKey || clientKey.trim() !== apiKey) {
+                    return sendJson(401, { error: 'Unauthorized' });
+                }
+            }
+
             if (url.pathname === '/health' || url.pathname === '/ping') {
                 const uptimeSeconds = Math.floor(process.uptime());
                 const timeSinceActivity = Date.now() - lastActivityTime;
@@ -126,7 +135,15 @@ export function startHealthServer(port = 3000) {
             } else if (url.pathname === '/jobs') {
                 sendJson(200, { jobs: await getRecentJobs() });
             } else if (url.pathname === '/accounts') {
-                sendJson(200, { accounts: await getStoredAccounts() });
+                let accounts;
+                if (isPostgresEnabled()) {
+                    accounts = await getStoredAccounts();
+                } else {
+                    const { getAccounts } = await import('./db.js');
+                    accounts = await getAccounts();
+                }
+                const sanitizedAccounts = accounts.map(({ encryptedCode, ...rest }) => rest);
+                sendJson(200, { accounts: sanitizedAccounts });
             } else if (url.pathname === '/dashboard/data') {
                 sendJson(200, await getDashboardData());
             } else if (url.pathname === '/dashboard') {

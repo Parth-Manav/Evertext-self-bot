@@ -458,7 +458,6 @@ export async function getAccountsFromDb() {
     return (result?.rows || []).map(row => ({
         id: row.legacy_id,
         name: row.label,
-        encryptedCode: row.encrypted_code,
         targetServer: row.target_server,
         serverToggle: row.server_toggle,
         lastRun: row.last_run_at ? row.last_run_at.toISOString() : null,

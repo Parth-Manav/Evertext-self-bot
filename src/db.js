@@ -216,7 +216,7 @@ export const getAccounts = async () => {
     return await getAccountsFromDb();
   }
   const data = await getCachedData();
-  return data.accounts;
+  return (data.accounts || []).map(({ encryptedCode, ...rest }) => rest);
 };
 
 /**
