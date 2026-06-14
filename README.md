@@ -91,7 +91,13 @@ LOG_LEVEL=INFO
 PORT=3000
 ENCRYPTION_KEY=replace_with_a_random_secret
 DATABASE_URL=postgres://evertext:evertext@localhost:5432/evertext
+DASHBOARD_API_KEY=
+POSTGRES_USER=evertext
+POSTGRES_PASSWORD=evertext
+POSTGRES_DB=evertext
 ```
+
+`DASHBOARD_API_KEY`, if set, requires an `X-API-Key` header on `/accounts`, `/jobs`, `/metrics`, `/dashboard`, and `/dashboard/data`. The `POSTGRES_*` values are used by `docker-compose.yml` and should be changed before any public deployment.
 
 `GAME_URL` is used for browser navigation, cookie scoping, and WebSocket origin/host headers. `WS_BASE_URL` is used for the Engine.IO WebSocket connection.
 
@@ -179,14 +185,14 @@ Run with an environment file:
 docker run --env-file .env -p 3000:3000 hybrid-terminal-automation-framework
 ```
 
-## Health Endpoint
+## HTTP Endpoints
 
-The app exposes:
+The app exposes the following read-only endpoints:
 
-- `GET /health`
-- `GET /ping`
-
-The response includes process uptime, memory usage, last activity time, queue status, active account label, and whether the Rust brain is currently running. It does not expose cookies, restore codes, or other credentials.
+- `GET /health` / `GET /ping` — process uptime, memory usage, last activity time, queue status, active account label, and whether the Rust brain is currently running. These do not expose cookies, restore codes, or other credentials.
+- `GET /metrics` — job and account metrics summary (PostgreSQL-backed, returns empty/disabled if not configured).
+- `GET /jobs` — recent job history (last 50).
+- `GET /accounts` — account list with status (does not include encrypted credentials).
 
 ## Dashboard
 
@@ -201,7 +207,6 @@ If you changed `PORT`, use that port instead. The dashboard reads PostgreSQL met
 ## Responsible Use
 
 This project is intended for authorized automation, controlled testing, and engineering education. Do not use it against services where automation is prohibited or where you do not have permission. Keep credentials and local databases out of version control, respect rate limits, and prefer explicit approval from service owners before automating a target.
-Thank You
 
 ## Limitations
 
@@ -214,4 +219,3 @@ Thank You
 - Move target prompt strings and command choices into a dedicated adapter config.
 - Add more integration tests around the Node/Rust IPC boundary.
 - Expand health reporting with WebSocket connection state and last successful action timestamp.
-- Add a small local dashboard for queue and health visibility.
